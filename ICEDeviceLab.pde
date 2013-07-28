@@ -55,6 +55,7 @@ String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AU
 String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id));";
 String CREATE_BADGES_SQL = "CREATE TABLE badges (id INTEGER PRIMARY KEY AUTOINCREMENT, UID TEXT DEFAULT NULL);";
 
+String scanText = "Scan NFC Tag";
 float rotation = 0;
 
 void setup()
@@ -62,6 +63,11 @@ void setup()
   
   // Database setup
   db = new KetaiSQLite(this);  // open database file
+
+//  println("Dropping table users..." + db.query( "DROP TABLE IF EXISTS users;" ));
+//  println("Dropping table equipment..." + db.query( "DROP TABLE IF EXISTS equipment;" ));
+//  println("Dropping table activity..." + db.query( "DROP TABLE IF EXISTS activity;" ));
+//  println("Dropping table badges..." + db.query( "DROP TABLE IF EXISTS badges;" ));
 
   if ( db.connect() )
   {
@@ -117,7 +123,7 @@ void setup()
 //    }  
   }
   
-  // Setup Draw settings
+// Setup Draw settings
 //  orientation(LANDSCAPE);
   textAlign(CENTER, CENTER);
   textSize(36);
@@ -130,21 +136,26 @@ void setup()
 void draw() {
 
   background(78, 93, 75);
-//  text("<Touch tag to write message>\nLast Write Status: "    + writeStatus, width/2, height/2);
+  drawUI();
   
+}
+
+void onNFCEvent(String txt)
+{
+  scanText = "NFC Tag: " + txt;
+}
+
+void drawUI() {
+  // Rotating Circle
   rotation += 1;
   if (rotation > 360) {
     rotation = 0;
   }
   pushMatrix();
   translate(width/2,height/2);
+  text(scanText, 0, 0);
   rotate(radians(rotation));
-  arc(0, 0, width/3, width/3, PI, PI*2);
-  text("Scan NFC tag", 0, 0);
+  arc(0, 0, width/2, width/2, PI, PI*2);
   popMatrix();
-  
-}
 
-void drawUI() {
-  
 }
