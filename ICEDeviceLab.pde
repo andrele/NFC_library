@@ -43,18 +43,16 @@ import ketai.data.*;
 import ketai.net.nfc.*;
 import ketai.ui.*;
 
-import controlP5.*;
-
 // Initialize global variables
 KetaiSQLite db;
 KetaiNFC ketaiNFC;
 
-ControlP5 cp5;
 String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL  DEFAULT 'NULL',email TEXT NOT NULL  DEFAULT 'NULL',phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL,id_badges INTEGER NOT NULL REFERENCES badges (id));";
-String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL,description TEXT DEFAULT NULL);";
+String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL,description TEXT DEFAULT NULL, id_badges INTEGER NOT NULL REFERENCES badges (id));";
 String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id));";
 String CREATE_BADGES_SQL = "CREATE TABLE badges (id INTEGER PRIMARY KEY AUTOINCREMENT, UID TEXT DEFAULT NULL);";
 
+int currentScreen;
 String scanText = "Scan NFC Tag";
 float rotation = 0;
 
@@ -91,6 +89,12 @@ void setup()
       db.execute(CREATE_BADGES_SQL);
       println("Executing " + CREATE_BADGES_SQL);
     }
+    
+//    if (db.execute("INSERT INTO badges ('UID') VALUES ('AndreLe');"))
+//      println("Added AndreLe to badges");
+
+//    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'id_badges') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', 1);"))
+//      println("Added Andre Le to users");
     
     // Print record counts
     println("data count for users table: "+db.getRecordCount("users"));
@@ -136,16 +140,30 @@ void setup()
 void draw() {
 
   background(78, 93, 75);
-  drawUI();
+  switch(currentScreen) {
+    case 0: drawScanScreen(); break;
+    case 1: drawProfileScreen(); break;
+    case 2: drawDeviceScreen(); break;
+    default: drawScanScreen(); break;
+  }
   
 }
 
 void onNFCEvent(String txt)
 {
+  switch(currentScreen) {
+    case 0: 
+      findBadgeOwner(txt);
+      break;
+    default:
+      findBadgeOwner(txt);
+      break;
+  }
   scanText = "NFC Tag: " + txt;
+  
 }
 
-void drawUI() {
+void drawScanScreen() {
   // Rotating Circle
   rotation += 1;
   if (rotation > 360) {
@@ -158,4 +176,37 @@ void drawUI() {
   arc(0, 0, width/2, width/2, PI, PI*2);
   popMatrix();
 
+}
+
+void drawProfileScreen() {
+}
+
+void drawDeviceScreen() {
+}
+
+void findBadgeOwner(String txt) {
+  println("Finding badge...");
+  Boolean success = false;
+  db.query("SELECT * FROM badges WHERE UID LIKE '"+ txt + "';");
+  while (db.next())
+  {
+    println("Badge found. ID = " + db.getInt("id"));
+    success = true;
+  }
+ 
+  if (!success)
+    println("Badge not found.");
+  
+  success = false;
+  db.query("SELECT * FROM badges INNER JOIN users ON badges.id = users.id_badges");
+  while (db.next())
+  {
+    //    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'id_badges') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', 1);"))
+
+      println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\tID Badge: " + db.getInt("id_badges"));
+      success = true;
+  }
+  
+  if (!success)
+    println("User not found.");
 }
