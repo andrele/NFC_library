@@ -50,10 +50,9 @@ KetaiNFC ketaiNFC;
 //KetaiCamera cam;
 PImage img;
 
-String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL  DEFAULT 'NULL',email TEXT NOT NULL  DEFAULT 'NULL',phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL,id_badges INTEGER NOT NULL REFERENCES badges (id));";
-String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL,description TEXT DEFAULT NULL, id_badges INTEGER NOT NULL REFERENCES badges (id));";
+String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
+String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, id_badges INTEGER NOT NULL REFERENCES badges (id), UID TEXT UNIQUE);";
 String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id), timestamp DATETIME DEFAULT CURRENT_TIMESTAMP);";
-String CREATE_BADGES_SQL = "CREATE TABLE badges (id INTEGER PRIMARY KEY AUTOINCREMENT, UID TEXT DEFAULT NULL);";
 
 int currentScreen;
 String scanText = "Scan NFC Tag";
@@ -66,13 +65,18 @@ void setup()
   // Database setup
   db = new KetaiSQLite(this);  // open database file
 
-  //  println("Dropping table users..." + db.query( "DROP TABLE IF EXISTS users;" ));
-  //  println("Dropping table equipment..." + db.query( "DROP TABLE IF EXISTS equipment;" ));
-  //  println("Dropping table activity..." + db.query( "DROP TABLE IF EXISTS activity;" ));
-  //  println("Dropping table badges..." + db.query( "DROP TABLE IF EXISTS badges;" ));
+
 
   if ( db.connect() )
   {
+    println("Dropped users table: " + db.execute( "DROP TABLE users;" ));
+    println("Dropped equipment table: " + db.execute( "DROP TABLE equipment;" ));
+    println("Dropped activity table: " + db.execute( "DROP TABLE activity;" ));
+    println("Dropped badges table: " + db.execute( "DROP TABLE badges;" ));
+    // Delete all data (Uncomment for debugging only)
+    println("Deleting ALL database data!");
+    db.deleteAllData();
+    
     // Creating tables if they don't exist
     if (!db.tableExists("users")) {
       db.execute(CREATE_USERS_SQL);
@@ -88,23 +92,19 @@ void setup()
       db.execute(CREATE_ACTIVITY_SQL);
       println("Executing " + CREATE_ACTIVITY_SQL);
     }
-
-    if (!db.tableExists("badges")) {
-      db.execute(CREATE_BADGES_SQL);
-      println("Executing " + CREATE_BADGES_SQL);
-    }
-
+    
     //    if (db.execute("INSERT INTO badges ('UID') VALUES ('AndreLe');"))
     //      println("Added AndreLe to badges");
+    
+    String newUID = generateUID();
 
-    //    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'id_badges') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', 1);"))
-    //      println("Added Andre Le to users");
+    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', '"+ newUID +"');"))
+          println("Added Andre Le to users");
 
     // Print record counts
     println("data count for users table: "+db.getRecordCount("users"));
     println("data count for equipment table: "+db.getRecordCount("equipment"));
     println("data count for activity table: "+db.getRecordCount("activity"));
-    println("data count for badges table: "+db.getRecordCount("badges"));
 
     // Existing code
     //    println("data count for data table: "+db.getRecordCount("data"));
@@ -164,7 +164,6 @@ void draw() {
   }
 
   drawProfileScreen();
-  println(generateUDID());
 }
 
 void onNFCEvent(String txt)
@@ -223,21 +222,11 @@ void drawDeviceScreen() {
 void findBadgeOwner(String txt) {
   println("Finding badge...");
   Boolean success = false;
-  db.query("SELECT * FROM badges WHERE UID LIKE '"+ txt + "';");
+  db.query("SELECT * FROM users WHERE UID LIKE '"+ txt + "';");
   while (db.next ())
   {
-    println("Badge found. ID = " + db.getInt("id"));
-    success = true;
-  }
-
-  if (!success)
-    println("Badge not found.");
-
-  success = false;
-  db.query("SELECT * FROM badges INNER JOIN users ON badges.id = users.id_badges");
-  while (db.next ())
-  {
-    println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\tID Badge: " + db.getInt("id_badges"));
+    println("User found: " + db.getInt("id"));
+    println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\tID Badge: " + db.getString("badge"));
     success = true;
   }
 
@@ -245,11 +234,11 @@ void findBadgeOwner(String txt) {
     println("User not found.");
 
   success = false;
-  db.query("SELECT * FROM badges INNER JOIN equipment ON badges.id = users.id_badges");
+  db.query("SELECT * FROM equipment WHERE UID LIKE '"+ txt + "';");
   while (db.next ())
   {
-
-    println(db.getString("name") + "\t" + db.getString("description") + "\tID Badge: " + db.getInt("id_badges"));
+    println("Equipment found: " + db.getInt("id"));
+    println(db.getString("name") + "\t" + db.getString("description") + "\tID Badge: " + db.getString("UID"));
     success = true;
   }
 
@@ -258,8 +247,8 @@ void findBadgeOwner(String txt) {
 }
 
 // Function to generate a random 32 character alphanumeric string
-String generateUDID() {
-  String UDID = "";
+String generateUID() {
+  String UID = "";
   
   for (int i = 0; i < 32; i++) {
     int randomChar = 0;
@@ -278,8 +267,8 @@ String generateUDID() {
     }
     
     // Add the random character to the string
-    UDID = UDID + str((char)randomChar);
+    UID = UID + str((char)randomChar);
   }
   
-  return UDID;
+  return UID;
 }
