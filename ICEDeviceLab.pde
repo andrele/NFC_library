@@ -58,13 +58,15 @@ APButton writeButton, readButton, userListButton;
 APEditText nameField, emailField, phoneField;
 
 public static final String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
-public static final String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, available INTEGER DEFAULT 1, UID TEXT UNIQUE, status INTEGER DEFAULT 1);";
-public static final String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id), timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, status INTEGER DEFAULT 0);";
+public static final String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, available INTEGER DEFAULT 1, UID TEXT UNIQUE, checkout INTEGER DEFAULT 1);";
+public static final String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id), timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, checkout INTEGER DEFAULT 0);";
 
 public static final int USER_TAG = 1;
 public static final int EQUIPMENT_TAG = 2;
+
 int lastTagType = 0;
 String lastTagUID = "";
+String lastScan = "";
 String newUID = "";
 String[] tagWriteBuffer = {"", "", "", "", ""};
 
@@ -84,7 +86,6 @@ PFont font;
 
 void setup()
 {
-
   // Database setup
   db = new KetaiSQLite(this);  // open database file
 
@@ -115,38 +116,17 @@ void setup()
     }
     
     // Create an entry for testing
-    String newUID = generateUID();
-    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', '"+ newUID +"');"))
-          println("Added Andre Le to users");
+    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', 'pXqsnJE1Ja5Ysatm');"))
+      println("Added Andre Le to users");
+    if (db.execute("INSERT INTO equipment ('name', 'description', 'UID', 'checkout') VALUES ('Samsung S4', 'Best phone ever!', 'lGVQgmAsqOalY6bV', 1);"))
+      println("Added Samsung S4 to equipment");
+    if (db.execute("INSERT INTO activity ('id_equipment', 'id_users', 'checkout') VALUES (1, 1, 1);"))
+      println("Added S4 checkout to Andre");
 
     // Print record counts
     println("data count for users table: "+db.getRecordCount("users"));
     println("data count for equipment table: "+db.getRecordCount("equipment"));
     println("data count for activity table: "+db.getRecordCount("activity"));
-
-    // Existing code
-    //    println("data count for data table: "+db.getRecordCount("data"));
-    //
-    //    //lets insert a random number or records
-    //    int count = (int)random(1, 5);
-    //
-    //    for (int i=0; i < count; i++)
-    //      if (!db.execute("INSERT into data (`name`,`age`) VALUES ('person"+(int)random(0, 100)+"', '"+(int)random(1, 100)+"' )"))
-    //        println("error w/sql insert");
-    //
-    //    println("data count for data table after insert: "+db.getRecordCount("data"));
-    //
-    //    // read all in table "table_one"
-    //    db.query( "SELECT * FROM data" );
-    //
-    //    while (db.next ())
-    //    {
-    //      println("----------------");
-    //      print( db.getString("name") );
-    //      print( "\t"+db.getInt("age") );
-    //      println("\t"+db.getInt("foobar"));   //doesn't exist we get '0' returned
-    //      println("----------------");
-    //    }
   }
   
   // Set font settings
@@ -163,6 +143,7 @@ void setup()
   strokeWeight(5);
   currentScreen = SCAN_MODE;
   
+  // Native Android Widgets
   widgetContainer = new APWidgetContainer(this); // create new container for widgets
   writeButton = new APButton(width/3, height - fontSize*3, "Write NFC Tag");
   readButton = new APButton(width/3*2, height - fontSize*3, "Read NFC Tag");
@@ -184,8 +165,10 @@ void draw() {
     drawWriteScreen();
     break;
   case USER_PROFILE_MODE: 
+    drawProfileScreen();
     break;
   case EQUIPMENT_PROFILE_MODE:
+    drawEquipmentScreen();
     break;
   case UNRECOGNIZED_MODE:
     drawUnrecognizedScreen();
@@ -201,10 +184,14 @@ void draw() {
 
 }
 
+/*
+ * Drawing subroutines
+ */
+
 void drawUnrecognizedScreen() {
   pushStyle();
   textAlign(CENTER, CENTER);
-  text("Sorry! Your badge is unrecognized.\nWould you like to rewrite it?\nScan again to enter edit mode.", width/2, height/2);
+  text("Sorry! Your badge is unrecognized.\nWould you like to rewrite it?\nTap the screen to enter edit mode.", width/2, height/2);
   popStyle();
 }
 
@@ -225,9 +212,9 @@ void drawScanScreen() {
 }
 
 void drawProfileScreen() {
-  screenTitle = "Profile";
+  screenTitle = "User Profile";
   pushStyle();
-  int x_offset = 50;
+  int x_offset = width/3;
   int y_offset = 150;
   textAlign(LEFT, CENTER);
   text("Name", x_offset, y_offset);
@@ -240,7 +227,7 @@ void drawProfileScreen() {
 void drawWriteScreen() {
   int x_offset = width/3;
   int y_offset = 150;
-  screenTitle = "Write mode";
+  screenTitle = "Edit mode";
   
   pushStyle();
   textAlign(RIGHT, CENTER);
@@ -258,14 +245,15 @@ void drawWriteScreen() {
 }
 
 void clearScreen() {
-  widgetContainer.removeWidget(nameField);
-  widgetContainer.removeWidget(emailField);
   widgetContainer.removeWidget(phoneField);
+  widgetContainer.removeWidget(emailField);
+  widgetContainer.removeWidget(nameField);
   changesMade = false;
   ketaiNFC.cancelWrite();
 }
 
 void setupWriteScreen(int x, int y) {
+  currentScreen = CREATE_MODE;
   int x_offset = 200;
   int y_offset = -50;
   newUID = generateUID();
@@ -273,14 +261,14 @@ void setupWriteScreen(int x, int y) {
   nameField = new APEditText(x + x_offset, y + y_offset, width/2, 100);
   widgetContainer.addWidget( nameField );
   nameField.setInputType(InputType.TYPE_CLASS_TEXT);
-  nameField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+  nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
   nameField.setText("Test");
   
   emailField = new APEditText(x + x_offset, int(y+fontSize * 2.5) + y_offset, width/2, 100);
   widgetContainer.addWidget( emailField );
   emailField.setNextEditText( emailField );
   emailField.setInputType(InputType.TYPE_CLASS_TEXT);
-  emailField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+  emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
   emailField.setText("example@email.com");
   
   phoneField = new APEditText(x + x_offset, int(y+fontSize * 5) + y_offset, width/2, 100);
@@ -292,7 +280,7 @@ void setupWriteScreen(int x, int y) {
   phoneField.setText("(123) 123-1234");
 }
 
-void drawDeviceScreen() {
+void drawEquipmentScreen() {
 }
 
 
@@ -310,8 +298,12 @@ void onNFCEvent(String txt)
     badgeType = int(badge[0]);
     badgeContents = badge[1];
     
-    if (badgeType == lastTagType && badgeContents.equals(lastTagUID)) {
+    if (txt.equals(lastScan)) {
       println("Repeat scan detected.");
+      
+      if (currentScreen == UNRECOGNIZED_MODE) {
+        setupWriteScreen(100, 150);
+      }
     }
     
     // Check to see if it's a recognized badge type
@@ -331,6 +323,7 @@ void onNFCEvent(String txt)
     // Remember the last badge scan for repeat actions
     lastTagType = badgeType;
     lastTagUID = badgeContents;
+    lastScan = txt;
   } else {
       // Incompatible format
       currentScreen = UNRECOGNIZED_MODE;
@@ -341,7 +334,6 @@ void onNFCEvent(String txt)
 void onClickWidget(APWidget widget) {
   if (widget == writeButton && currentScreen != CREATE_MODE) {
     screenTitle = "Write Mode";
-    currentScreen = CREATE_MODE;
     setupWriteScreen( 100, 150 );
   } else if (widget == readButton && currentScreen != SCAN_MODE) {
     screenTitle = "Scanning Mode";
@@ -373,6 +365,12 @@ void onNFCWrite(boolean result, String message)
 }
 
 void mousePressed() {
+  
+  if (currentScreen == UNRECOGNIZED_MODE) {
+    setupWriteScreen( 100, 150);
+    return;
+  }
+  
   if (mouseY < height*2/3) {
     KetaiKeyboard.hide(this);
     if (currentScreen == CREATE_MODE) {
