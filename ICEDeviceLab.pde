@@ -76,6 +76,8 @@ public static final int USER_PROFILE_MODE = 3;
 public static final int EQUIPMENT_PROFILE_MODE = 4;
 public static final int UNRECOGNIZED_MODE = 5;
 int currentScreen = 0;
+User currentUser;
+Equipment currentEquipment;
 String scanText = "Scan NFC Tag";
 String screenTitle = "";
 float rotation = 0;
@@ -83,6 +85,8 @@ int fontSize = 36;
 Boolean changesMade = false;
 
 PFont font;
+
+
 
 void setup()
 {
@@ -151,7 +155,12 @@ void setup()
   widgetContainer.addWidget(writeButton);
   widgetContainer.addWidget(readButton);
   widgetContainer.addWidget(userListButton);
-
+  
+  int x_offset = 300;
+  int y_offset = 100;
+  nameField = new APEditText(x_offset, y_offset, width/2, 100);
+  emailField = new APEditText(x_offset, int(fontSize * 2.5) + y_offset, width/2, 100);
+  phoneField = new APEditText(x_offset, int(fontSize * 5) + y_offset, width/2, 100);
 }
 
 void draw() {
@@ -217,10 +226,21 @@ void drawProfileScreen() {
   int x_offset = width/3;
   int y_offset = 150;
   textAlign(LEFT, CENTER);
-  text("Name", x_offset, y_offset);
-  text("Email", x_offset, y_offset + (fontSize * 2.5));
-  text("Phone", x_offset, y_offset + (fontSize * 5));
+  text(currentUser.name, x_offset, y_offset);
+  text(currentUser.email, x_offset, y_offset + (fontSize * 2.5));
+  text(currentUser.phone, x_offset, y_offset + (fontSize * 5));
 
+  popStyle();
+}
+
+void drawEquipmentScreen() {
+  screenTitle = "Equipment Profile";
+  pushStyle();
+  int x_offset = width/3;
+  int y_offset = 150;
+  textAlign(LEFT, CENTER);
+  text(currentEquipment.name, x_offset, y_offset);
+  text(currentEquipment.description, x_offset, y_offset + (fontSize * 2.5));
   popStyle();
 }
 
@@ -254,34 +274,37 @@ void clearScreen() {
 
 void setupWriteScreen(int x, int y) {
   currentScreen = CREATE_MODE;
-  int x_offset = 200;
-  int y_offset = -50;
+  String name = "Test";
+  String email = "example@email.com";
+  String phone = "(123) 123-1234)";
   newUID = generateUID();
-    
-  nameField = new APEditText(x + x_offset, y + y_offset, width/2, 100);
-  widgetContainer.addWidget( nameField );
-  nameField.setInputType(InputType.TYPE_CLASS_TEXT);
-  nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-  nameField.setText("Test");
   
-  emailField = new APEditText(x + x_offset, int(y+fontSize * 2.5) + y_offset, width/2, 100);
-  widgetContainer.addWidget( emailField );
-  emailField.setNextEditText( emailField );
-  emailField.setInputType(InputType.TYPE_CLASS_TEXT);
-  emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-  emailField.setText("example@email.com");
+  if (currentUser != null) {
+    name = currentUser.name;
+    email = currentUser.email;
+    phone = currentUser.phone;
+  }
   
-  phoneField = new APEditText(x + x_offset, int(y+fontSize * 5) + y_offset, width/2, 100);
-  widgetContainer.addWidget( phoneField );
-  phoneField.setNextEditText( phoneField );
-  phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
-  phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
-  phoneField.setCloseImeOnDone(true);
-  phoneField.setText("(123) 123-1234");
+    widgetContainer.addWidget( nameField );
+    nameField.setInputType(InputType.TYPE_CLASS_TEXT);
+    nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+    nameField.setText(name);
+  
+    widgetContainer.addWidget( emailField );
+    emailField.setNextEditText( emailField );
+    emailField.setInputType(InputType.TYPE_CLASS_TEXT);
+    emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+    emailField.setText(email);
+  
+    widgetContainer.addWidget( phoneField );
+    phoneField.setNextEditText( phoneField );
+    phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
+    phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+    phoneField.setCloseImeOnDone(true);
+    phoneField.setText(phone);
 }
 
-void drawEquipmentScreen() {
-}
+
 
 
 /*
@@ -301,18 +324,20 @@ void onNFCEvent(String txt)
     if (txt.equals(lastScan)) {
       println("Repeat scan detected.");
       
-      if (currentScreen == UNRECOGNIZED_MODE) {
+      if (currentScreen == USER_PROFILE_MODE) {
+        setupWriteScreen(100, 150);
+      } else if (currentScreen == UNRECOGNIZED_MODE) {
         setupWriteScreen(100, 150);
       }
     }
     
     // Check to see if it's a recognized badge type
     if (badgeType == USER_TAG) {
-      findUser(badgeContents);
+      currentUser = findUser(badgeContents);
       scanText = "User Badge";
 
     } else if (badgeType == EQUIPMENT_TAG) {
-      findEquipment(badgeContents);
+      currentEquipment = findEquipment(badgeContents);
       scanText = "Equipment Badge";
     }  else {
       //  Unrecognized badge type. Enter creation mode
@@ -333,7 +358,6 @@ void onNFCEvent(String txt)
 
 void onClickWidget(APWidget widget) {
   if (widget == writeButton && currentScreen != CREATE_MODE) {
-    screenTitle = "Write Mode";
     setupWriteScreen( 100, 150 );
   } else if (widget == readButton && currentScreen != SCAN_MODE) {
     screenTitle = "Scanning Mode";
@@ -350,8 +374,6 @@ void onClickWidget(APWidget widget) {
     updateWriteBuffer();
   }
 }
-
-
 
 void onNFCWrite(boolean result, String message)
 {
@@ -399,36 +421,47 @@ boolean updateRecord(String[] buffer) {
 }
  
 // Look up badge ID and associated equipment/user
-int findUser(String txt) {
+User findUser(String txt) {
+  User foundUser = new User();
   println("Finding user with badge " + txt);
   db.query("SELECT * FROM users WHERE UID LIKE'"+ txt + "';");
   while (db.next ())
   {
     currentScreen = USER_PROFILE_MODE;
+    foundUser.name = db.getString("name");
+    foundUser.email = db.getString("email");
+    foundUser.phone = db.getString("phone");
+    foundUser.id = db.getInt("id");
     println("User found:");
-    println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\tID Badge: " + db.getString("UID"));
-    return db.getInt("id");
+    println(foundUser.name + "\t" + foundUser.email + "\t" + foundUser.phone + "\tID Badge: " + foundUser.id);
+    
+    return foundUser;
   }
   
   scanText = "User not found.";
   println(scanText);
-  return 0;
+  return null;
 }
 
-int findEquipment(String txt) {
+Equipment findEquipment(String txt) {
+  Equipment foundEquipment = new Equipment();
   println("Finding equipment with badge " + txt);
   db.query("SELECT * FROM equipment WHERE UID LIKE '"+ txt + "';");
   while (db.next ())
   {
     currentScreen = EQUIPMENT_PROFILE_MODE;
+    foundEquipment.id = db.getInt("id");
+    foundEquipment.name = db.getString("name");
+    foundEquipment.description = db.getString("description");
+    foundEquipment.UID = db.getString("UID");
     println("Equipment found:");
-    println(db.getString("name") + "\t" + db.getString("description") + "\tID Badge: " + db.getString("UID"));
-    return db.getInt("id");
+    println(foundEquipment.name + "\t" + foundEquipment.description + "\tID Badge: " + foundEquipment.UID);
+    return foundEquipment;
   }
   
   scanText = "Equipment not found.";
   println(scanText);
-  return 0;
+  return null;
 }
 
 // Function to generate a random 32 character alphanumeric string
