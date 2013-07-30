@@ -43,9 +43,16 @@ import ketai.data.*;
 import ketai.net.nfc.*;
 import ketai.ui.*;
 
+import apwidgets.*;
+
+
 // Initialize global variables
 KetaiSQLite db;
 KetaiNFC ketaiNFC;
+
+APWidgetContainer widgetContainer;
+APButton writeButton;
+APButton readButton;
 
 public static final String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
 public static final String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, available INTEGER DEFAULT 1, UID TEXT UNIQUE, status INTEGER DEFAULT 1);";
@@ -71,8 +78,6 @@ void setup()
 
   // Database setup
   db = new KetaiSQLite(this);  // open database file
-
-
 
   if ( db.connect() )
   {
@@ -144,6 +149,12 @@ void setup()
   stroke(255, 255, 255);
   strokeWeight(5);
   currentScreen = SCAN_MODE;
+  
+  widgetContainer = new APWidgetContainer(this); // create new container for widgets
+  writeButton = new APButton(width/3, height - fontSize*3, "Write NFC Tag");
+  readButton = new APButton(width/3*2, height - fontSize*3, "Read NFC Tag");
+  widgetContainer.addWidget(writeButton);
+  widgetContainer.addWidget(readButton);
 
 }
 
@@ -154,7 +165,7 @@ void draw() {
   case SCAN_MODE: 
     drawScanScreen(); 
     break;
-  case CREATE_MODE: 
+  case CREATE_MODE:
     break;
   case USER_PROFILE_MODE: 
     break;
@@ -246,6 +257,17 @@ void drawProfileScreen() {
 
 
 void drawDeviceScreen() {
+}
+
+
+void onClickWidget(APWidget widget) {
+  if (widget == writeButton) {
+    screenTitle = "Write Mode";
+    currentScreen = CREATE_MODE;
+  } else if (widget == readButton) {
+    screenTitle = "Scanning Mode";
+    currentScreen = SCAN_MODE;
+  }
 }
 
 
