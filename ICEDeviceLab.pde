@@ -38,6 +38,8 @@
 // Import Libraries
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
+import android.view.inputmethod.EditorInfo;
 
 import ketai.data.*;
 import ketai.net.nfc.*;
@@ -50,9 +52,10 @@ import apwidgets.*;
 KetaiSQLite db;
 KetaiNFC ketaiNFC;
 
+// Setup Buttons and Text Fields
 APWidgetContainer widgetContainer;
-APButton writeButton;
-APButton readButton;
+APButton writeButton, readButton;
+APEditText nameField, emailField, phoneField;
 
 public static final String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
 public static final String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, available INTEGER DEFAULT 1, UID TEXT UNIQUE, status INTEGER DEFAULT 1);";
@@ -62,6 +65,8 @@ public static final int USER_TAG = 1;
 public static final int EQUIPMENT_TAG = 2;
 int lastTagType = 0;
 String lastTagUID = "";
+String newUID = "";
+String[] tagWriteBuffer;
 
 public static final int SCAN_MODE = 1;
 public static final int CREATE_MODE = 2;
@@ -166,6 +171,7 @@ void draw() {
     drawScanScreen(); 
     break;
   case CREATE_MODE:
+    drawWriteScreen();
     break;
   case USER_PROFILE_MODE: 
     break;
@@ -215,6 +221,7 @@ void onNFCEvent(String txt)
     }
     
     println(scanText);
+  } else if (currentScreen == CREATE_MODE) {
   }
 }
 
@@ -247,14 +254,51 @@ void drawProfileScreen() {
   popStyle();
 }
 
-//void drawProfileCreationScreen() {  
-//   pushMatrix();
-//   rotate(PI);
-//   
-//   if () {
-//   }
-//}
+void drawWriteScreen() {
+  int x_offset = width/3;
+  int y_offset = 150;
+  screenTitle = "Write mode";
+  
+  pushStyle();
+  textAlign(RIGHT, CENTER);
+  text("Name", x_offset, y_offset);
+  text("Email", x_offset, y_offset + (fontSize * 2.5));
+  text("Phone", x_offset, y_offset + (fontSize * 5));
+  textAlign(CENTER, CENTER);
+  text("New generated UID", width/2, y_offset + (fontSize * 7.5));
+  text( newUID, width/2, y_offset + (fontSize * 9));
+  text("Tap tag to rewrite", width/2, y_offset + (fontSize * 10.5));
+  popStyle();
+}
 
+void clearScreen() {
+  widgetContainer.removeWidget(nameField);
+  widgetContainer.removeWidget(emailField);
+  widgetContainer.removeWidget(phoneField);
+}
+
+void setupWriteScreen(int x, int y) {
+  int x_offset = 200;
+  int y_offset = -50;
+    
+  nameField = new APEditText(x + x_offset, y + y_offset, width/2, 100);
+  widgetContainer.addWidget( nameField );
+  nameField.setInputType(InputType.TYPE_CLASS_TEXT);
+  nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+  nameField.setText("Test");
+  
+  emailField = new APEditText(x + x_offset, int(y+fontSize * 2.5) + y_offset, width/2, 100);
+  widgetContainer.addWidget( emailField );
+  emailField.setNextEditText( emailField );
+  emailField.setInputType(InputType.TYPE_CLASS_TEXT);
+  emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+  
+  phoneField = new APEditText(x + x_offset, int(y+fontSize * 5) + y_offset, width/2, 100);
+  widgetContainer.addWidget( phoneField );
+  phoneField.setNextEditText( phoneField );
+  phoneField.setInputType(InputType.TYPE_CLASS_NUMBER);
+  phoneField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+}
 
 void drawDeviceScreen() {
 }
@@ -264,12 +308,20 @@ void onClickWidget(APWidget widget) {
   if (widget == writeButton) {
     screenTitle = "Write Mode";
     currentScreen = CREATE_MODE;
+    newUID = generateUID();
+    setupWriteScreen( 100, 150 );
   } else if (widget == readButton) {
     screenTitle = "Scanning Mode";
     currentScreen = SCAN_MODE;
+    clearScreen();
   }
 }
 
+void mousePressed() {
+  if (mouseY < height*2/3) {
+    KetaiKeyboard.hide(this);
+  }
+}
 
 /* 
  * Utility Functions
