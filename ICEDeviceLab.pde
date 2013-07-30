@@ -47,21 +47,22 @@ import ketai.ui.*;
 KetaiSQLite db;
 KetaiNFC ketaiNFC;
 
-String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
-String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, available INTEGER DEFAULT 1, UID TEXT UNIQUE);";
-String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id), timestamp DATETIME DEFAULT CURRENT_TIMESTAMP);";
+public static final String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
+public static final String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, available INTEGER DEFAULT 1, UID TEXT UNIQUE, status INTEGER DEFAULT 1);";
+public static final String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id), timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, status INTEGER DEFAULT 0);";
 
-int USER_TAG = 1;
-int EQUIPMENT_TAG = 2;
+public static final int USER_TAG = 1;
+public static final int EQUIPMENT_TAG = 2;
 int lastTagType = 0;
 String lastTagUID = "";
 
-int SCAN_MODE = 1;
-int CREATE_MODE = 2;
-int USER_PROFILE_MODE = 3;
-int EQUIPMENT_PROFILE_MODE = 4;
+public static final int SCAN_MODE = 1;
+public static final int CREATE_MODE = 2;
+public static final int USER_PROFILE_MODE = 3;
+public static final int EQUIPMENT_PROFILE_MODE = 4;
 int currentScreen = 0;
 String scanText = "Scan NFC Tag";
+String screenTitle = "";
 float rotation = 0;
 int fontSize = 36;
 
@@ -163,37 +164,52 @@ void draw() {
     drawScanScreen(); 
     break;
   }
+  
+  // Persistent UI
+  text(screenTitle, width/2, fontSize * 2);
+  
 
-  drawProfileScreen();
 }
 
 void onNFCEvent(String txt)
 {
   if (currentScreen == SCAN_MODE) {
-    int badgeType = 0;
-    String badgeContents = "";
     
-    String[] badge = split(txt, ':');
-    badgeType = int(badge[0]);
-    badgeContents = badge[1];
-    
-    if (badgeType == USER_TAG) {
-      findUser(badgeContents);
-      scanText = "User Badge/n Badge Contents: " + badgeContents;
-      lastTagType = USER_TAG;
-      lastTagUID = badgeContents;
-    } else if (badgeType == EQUIPMENT_TAG) {
-      findEquipment(badgeContents);
-      lastTagType = EQUIPMENT_TAG;
-      lastTagUID = badgeContents;
-    }  else {
-      //  Unrecognized tag. Ask to create
+    // Check to see if the : delimiter is in the right place
+    if (txt.indexOf(":") == 2) {
+      
+      
+      int badgeType = 0;
+      String badgeContents = "";
+      String[] badge = split(txt, ':');
+      badgeType = int(badge[0]);
+      badgeContents = badge[1];
+      
+      if (badgeType == USER_TAG) {
+        findUser(badgeContents);
+        scanText = "User Badge/n Badge Contents: " + badgeContents;
+        lastTagType = USER_TAG;
+        lastTagUID = badgeContents;
+      } else if (badgeType == EQUIPMENT_TAG) {
+        findEquipment(badgeContents);
+        lastTagType = EQUIPMENT_TAG;
+        lastTagUID = badgeContents;
+      }  else {
+        //  Unrecognized tag. Ask to create
+        scanText = "Unrecognized tag.";
+      }  
+    } else {
+      // Unrecognized tag. Ask to create
+      scanText = "Unrecognized tag.";
     }
+    
+    println(scanText);
   }
-  
 }
 
 void drawScanScreen() {
+  // Set title of screen
+  screenTitle = "Scanning Mode";
   // Rotating Circle
   rotation += 1;
   if (rotation > 360) {
@@ -208,6 +224,7 @@ void drawScanScreen() {
 }
 
 void drawProfileScreen() {
+  screenTitle = "Profile";
   pushStyle();
   int x_offset = 50;
   int y_offset = 150;
@@ -232,18 +249,24 @@ void drawDeviceScreen() {
 }
 
 
+/* 
+ * Utility Functions
+ */
+ 
 // Look up badge ID and associated equipment/user
 int findUser(String txt) {
   println("Finding user with badge " + txt);
   db.query("SELECT * FROM users WHERE UID LIKE '"+ txt + "';");
   while (db.next ())
   {
+    currentScreen = USER_PROFILE_MODE;
     println("User found:");
     println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\tID Badge: " + db.getString("badge"));
     return db.getInt("id");
   }
   
-  println("User not found.");
+  scanText = "User not found.";
+  println(scanText);
   return 0;
 }
 
@@ -252,12 +275,14 @@ int findEquipment(String txt) {
   db.query("SELECT * FROM equipment WHERE UID LIKE '"+ txt + "';");
   while (db.next ())
   {
+    currentScreen = EQUIPMENT_PROFILE_MODE;
     println("Equipment found:");
     println(db.getString("name") + "\t" + db.getString("description") + "\tID Badge: " + db.getString("UID"));
     return db.getInt("id");
   }
-
-  println("Equipment not found.");
+  
+  scanText = "Equipment not found.";
+  println(scanText);
   return 0;
 }
 
