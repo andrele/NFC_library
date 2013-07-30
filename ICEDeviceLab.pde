@@ -28,7 +28,7 @@
  */
 
 /*
-  * NFC Inventory System
+ * NFC Inventory System
  * Written by: Andre Le
  * Date: 7-26-13
  *
@@ -42,19 +42,25 @@ import android.os.Bundle;
 import ketai.data.*;
 import ketai.net.nfc.*;
 import ketai.ui.*;
-//import ketai.camera.*;
 
 // Initialize global variables
 KetaiSQLite db;
 KetaiNFC ketaiNFC;
-//KetaiCamera cam;
-PImage img;
 
 String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
-String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, id_badges INTEGER NOT NULL REFERENCES badges (id), UID TEXT UNIQUE);";
+String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, available INTEGER DEFAULT 1, UID TEXT UNIQUE);";
 String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id), timestamp DATETIME DEFAULT CURRENT_TIMESTAMP);";
 
-int currentScreen;
+int USER_TAG = 1;
+int EQUIPMENT_TAG = 2;
+int lastTagType = 0;
+String lastTagUID = "";
+
+int SCAN_MODE = 1;
+int CREATE_MODE = 2;
+int USER_PROFILE_MODE = 3;
+int EQUIPMENT_PROFILE_MODE = 4;
+int currentScreen = 0;
 String scanText = "Scan NFC Tag";
 float rotation = 0;
 int fontSize = 36;
@@ -93,11 +99,8 @@ void setup()
       println("Executing " + CREATE_ACTIVITY_SQL);
     }
     
-    //    if (db.execute("INSERT INTO badges ('UID') VALUES ('AndreLe');"))
-    //      println("Added AndreLe to badges");
-    
+    // Create an entry for testing
     String newUID = generateUID();
-
     if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', '"+ newUID +"');"))
           println("Added Andre Le to users");
 
@@ -139,24 +142,22 @@ void setup()
   noFill();
   stroke(255, 255, 255);
   strokeWeight(5);
+  currentScreen = SCAN_MODE;
 
-  //  Setup Camera
-//  cam = new KetaiCamera(this, 480, 640, 24);
-//  cam.setCameraID(1);
 }
 
 void draw() {
 
   background(78, 93, 75);
   switch(currentScreen) {
-  case 0: 
+  case SCAN_MODE: 
     drawScanScreen(); 
     break;
-  case 1: 
-    drawProfileScreen(); 
+  case CREATE_MODE: 
     break;
-  case 2: 
-    drawDeviceScreen(); 
+  case USER_PROFILE_MODE: 
+    break;
+  case EQUIPMENT_PROFILE_MODE:
     break;
   default: 
     drawScanScreen(); 
@@ -168,15 +169,28 @@ void draw() {
 
 void onNFCEvent(String txt)
 {
-  switch(currentScreen) {
-  case 0: 
-    findBadgeOwner(txt);
-    break;
-  default:
-    findBadgeOwner(txt);
-    break;
+  if (currentScreen == SCAN_MODE) {
+    int badgeType = 0;
+    String badgeContents = "";
+    
+    String[] badge = split(txt, ':');
+    badgeType = int(badge[0]);
+    badgeContents = badge[1];
+    
+    if (badgeType == USER_TAG) {
+      findUser(badgeContents);
+      scanText = "User Badge/n Badge Contents: " + badgeContents;
+      lastTagType = USER_TAG;
+      lastTagUID = badgeContents;
+    } else if (badgeType == EQUIPMENT_TAG) {
+      findEquipment(badgeContents);
+      lastTagType = EQUIPMENT_TAG;
+      lastTagUID = badgeContents;
+    }  else {
+      //  Unrecognized tag. Ask to create
+    }
   }
-  scanText = "NFC Tag: " + txt;
+  
 }
 
 void drawScanScreen() {
@@ -219,31 +233,32 @@ void drawDeviceScreen() {
 
 
 // Look up badge ID and associated equipment/user
-void findBadgeOwner(String txt) {
-  println("Finding badge...");
-  Boolean success = false;
+int findUser(String txt) {
+  println("Finding user with badge " + txt);
   db.query("SELECT * FROM users WHERE UID LIKE '"+ txt + "';");
   while (db.next ())
   {
-    println("User found: " + db.getInt("id"));
+    println("User found:");
     println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\tID Badge: " + db.getString("badge"));
-    success = true;
+    return db.getInt("id");
   }
+  
+  println("User not found.");
+  return 0;
+}
 
-  if (!success)
-    println("User not found.");
-
-  success = false;
+int findEquipment(String txt) {
+  println("Finding equipment with badge " + txt);
   db.query("SELECT * FROM equipment WHERE UID LIKE '"+ txt + "';");
   while (db.next ())
   {
-    println("Equipment found: " + db.getInt("id"));
+    println("Equipment found:");
     println(db.getString("name") + "\t" + db.getString("description") + "\tID Badge: " + db.getString("UID"));
-    success = true;
+    return db.getInt("id");
   }
 
-  if (!success)
-    println("Equipment not found.");
+  println("Equipment not found.");
+  return 0;
 }
 
 // Function to generate a random 32 character alphanumeric string
