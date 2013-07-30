@@ -66,17 +66,21 @@ public static final int EQUIPMENT_TAG = 2;
 int lastTagType = 0;
 String lastTagUID = "";
 String newUID = "";
-String[] tagWriteBuffer;
+String[] tagWriteBuffer = {"", "", "", "", ""};
 
 public static final int SCAN_MODE = 1;
 public static final int CREATE_MODE = 2;
 public static final int USER_PROFILE_MODE = 3;
 public static final int EQUIPMENT_PROFILE_MODE = 4;
+public static final int UNRECOGNIZED_MODE = 5;
 int currentScreen = 0;
 String scanText = "Scan NFC Tag";
 String screenTitle = "";
 float rotation = 0;
 int fontSize = 36;
+Boolean changesMade = false;
+
+PFont font;
 
 void setup()
 {
@@ -144,6 +148,10 @@ void setup()
     //      println("----------------");
     //    }
   }
+  
+  // Set font settings
+  font = loadFont("HelveticaNeue-Light-48.vlw");
+  textFont(font, 42);
 
   // Setup Draw settings
   orientation(PORTRAIT);
@@ -165,7 +173,7 @@ void setup()
 
 void draw() {
 
-  background(78, 93, 75);
+  background(#6db7ff);
   switch(currentScreen) {
   case SCAN_MODE: 
     drawScanScreen(); 
@@ -177,52 +185,17 @@ void draw() {
     break;
   case EQUIPMENT_PROFILE_MODE:
     break;
+  case UNRECOGNIZED_MODE:
+    break;
   default: 
     drawScanScreen(); 
     break;
   }
   
   // Persistent UI
-  text(screenTitle, width/2, fontSize * 2);
+  text(screenTitle, width/2, fontSize * 1.5);
   
 
-}
-
-void onNFCEvent(String txt)
-{
-  if (currentScreen == SCAN_MODE) {
-    
-    // Check to see if the : delimiter is in the right place
-    if (txt.indexOf(":") == 2) {
-      
-      
-      int badgeType = 0;
-      String badgeContents = "";
-      String[] badge = split(txt, ':');
-      badgeType = int(badge[0]);
-      badgeContents = badge[1];
-      
-      if (badgeType == USER_TAG) {
-        findUser(badgeContents);
-        scanText = "User Badge/n Badge Contents: " + badgeContents;
-        lastTagType = USER_TAG;
-        lastTagUID = badgeContents;
-      } else if (badgeType == EQUIPMENT_TAG) {
-        findEquipment(badgeContents);
-        lastTagType = EQUIPMENT_TAG;
-        lastTagUID = badgeContents;
-      }  else {
-        //  Unrecognized tag. Ask to create
-        scanText = "Unrecognized tag.";
-      }  
-    } else {
-      // Unrecognized tag. Ask to create
-      scanText = "Unrecognized tag.";
-    }
-    
-    println(scanText);
-  } else if (currentScreen == CREATE_MODE) {
-  }
 }
 
 void drawScanScreen() {
@@ -267,7 +240,10 @@ void drawWriteScreen() {
   textAlign(CENTER, CENTER);
   text("New generated UID", width/2, y_offset + (fontSize * 7.5));
   text( newUID, width/2, y_offset + (fontSize * 9));
-  text("Tap tag to rewrite", width/2, y_offset + (fontSize * 10.5));
+  if (changesMade) {
+    text("Changes detected. Tap tag to rewrite", width/2, y_offset + (fontSize * 10.5));
+  }
+  
   popStyle();
 }
 
@@ -280,46 +256,107 @@ void clearScreen() {
 void setupWriteScreen(int x, int y) {
   int x_offset = 200;
   int y_offset = -50;
+  newUID = generateUID();
     
   nameField = new APEditText(x + x_offset, y + y_offset, width/2, 100);
   widgetContainer.addWidget( nameField );
   nameField.setInputType(InputType.TYPE_CLASS_TEXT);
-  nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+  nameField.setImeOptions(EditorInfo.IME_ACTION_DONE);
   nameField.setText("Test");
   
   emailField = new APEditText(x + x_offset, int(y+fontSize * 2.5) + y_offset, width/2, 100);
   widgetContainer.addWidget( emailField );
   emailField.setNextEditText( emailField );
   emailField.setInputType(InputType.TYPE_CLASS_TEXT);
-  emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+  emailField.setImeOptions(EditorInfo.IME_ACTION_DONE);
   
   phoneField = new APEditText(x + x_offset, int(y+fontSize * 5) + y_offset, width/2, 100);
   widgetContainer.addWidget( phoneField );
   phoneField.setNextEditText( phoneField );
-  phoneField.setInputType(InputType.TYPE_CLASS_NUMBER);
-  phoneField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+  phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
+  phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+  phoneField.setCloseImeOnDone(true);
 }
 
 void drawDeviceScreen() {
 }
 
 
+/*
+ * Interactions
+ */
+ 
+void onNFCEvent(String txt)
+{
+  // Check to see if the format is compatible (i.e. if the : delimiter is in the right place)
+  if (txt.indexOf(":") == 1) {
+    int badgeType = 0;
+    String badgeContents = "";
+    String[] badge = split(txt, ':');
+    badgeType = int(badge[0]);
+    badgeContents = badge[1];
+    
+    if (badgeType == lastTagType && badgeContents.equals(lastTagUID)) {
+      println("Repeat scan detected.");
+    }
+    
+    // Check to see if it's a recognized badge type
+    if (badgeType == USER_TAG) {
+      findUser(badgeContents);
+      scanText = "User Badge";
+
+    } else if (badgeType == EQUIPMENT_TAG) {
+      findEquipment(badgeContents);
+      scanText = "Equipment Badge";
+    }  else {
+      //  Unrecognized badge type. Enter creation mode
+      println("Not a recognized badge type. Reprogram?");
+      currentScreen = UNRECOGNIZED_MODE;
+    }  
+    
+    // Remember the last badge scan for repeat actions
+    lastTagType = badgeType;
+    lastTagUID = badgeContents;
+  } else {
+      // Incompatible format
+      currentScreen = UNRECOGNIZED_MODE;
+      println("Unrecognized format. Reprogram?");
+  }
+}
+
 void onClickWidget(APWidget widget) {
-  if (widget == writeButton) {
+  if (widget == writeButton && currentScreen != CREATE_MODE) {
     screenTitle = "Write Mode";
     currentScreen = CREATE_MODE;
-    newUID = generateUID();
     setupWriteScreen( 100, 150 );
-  } else if (widget == readButton) {
+  } else if (widget == readButton && currentScreen != SCAN_MODE) {
     screenTitle = "Scanning Mode";
     currentScreen = SCAN_MODE;
     clearScreen();
+  } else if (widget == nameField || widget == emailField || widget == phoneField) {
+    // Update write buffer with changes made to text fields
+    updateWriteBuffer();
+  }
+}
+
+
+
+void onNFCWrite(boolean result, String message)
+{
+  if (result) {
+    println("Success writing tag!");
+    changesMade = false;
+  } else {
+    println("Failed to write tag: " + message);
   }
 }
 
 void mousePressed() {
   if (mouseY < height*2/3) {
     KetaiKeyboard.hide(this);
+    if (currentScreen == CREATE_MODE) {
+      updateWriteBuffer();
+    }
   }
 }
 
@@ -364,7 +401,7 @@ int findEquipment(String txt) {
 String generateUID() {
   String UID = "";
   
-  for (int i = 0; i < 32; i++) {
+  for (int i = 0; i < 16; i++) {
     int randomChar = 0;
     Boolean validChar = false;
     while (validChar == false) {
@@ -385,4 +422,32 @@ String generateUID() {
   }
   
   return UID;
+}
+
+// Update the write buffer and prepare for writing
+void updateWriteBuffer() {
+    tagWriteBuffer[0] = nameField.getText();
+    tagWriteBuffer[1] = emailField.getText();
+    tagWriteBuffer[2] = phoneField.getText();
+    tagWriteBuffer[3] = newUID;
+    tagWriteBuffer[4] = "USER_TAG";
+    println("Write buffer updated with: " + tagWriteBuffer[0] + " " + tagWriteBuffer[1] + " " + tagWriteBuffer[2] + " " + tagWriteBuffer[3] + " " + tagWriteBuffer[4]);
+    changesMade = true;
+    writeTag(tagWriteBuffer);
+}
+
+
+// Write the tag using the buffer
+void writeTag(String[] tagWriteBuffer) {
+   String tagContents = "";
+   // If tag is user type, then prefix with 1:
+   if (tagWriteBuffer[4] == "USER_TAG") {
+     tagContents = str(USER_TAG) + ":" + tagWriteBuffer[3];
+     // Update user table with other info
+   } else { // If tag is equipment type, then prefix with 2:
+     tagContents = str(EQUIPMENT_TAG) + ":" + tagWriteBuffer[3];
+     // Update equipment table with other info
+   }
+   
+   ketaiNFC.write(tagContents);
 }
