@@ -54,7 +54,7 @@ KetaiNFC ketaiNFC;
 
 // Setup Buttons and Text Fields
 APWidgetContainer widgetContainer;
-APButton writeButton, readButton;
+APButton writeButton, readButton, userListButton;
 APEditText nameField, emailField, phoneField;
 
 public static final String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
@@ -166,8 +166,10 @@ void setup()
   widgetContainer = new APWidgetContainer(this); // create new container for widgets
   writeButton = new APButton(width/3, height - fontSize*3, "Write NFC Tag");
   readButton = new APButton(width/3*2, height - fontSize*3, "Read NFC Tag");
+  userListButton = new APButton(0, height - fontSize*3, "User List");
   widgetContainer.addWidget(writeButton);
   widgetContainer.addWidget(readButton);
+  widgetContainer.addWidget(userListButton);
 
 }
 
@@ -186,6 +188,7 @@ void draw() {
   case EQUIPMENT_PROFILE_MODE:
     break;
   case UNRECOGNIZED_MODE:
+    drawUnrecognizedScreen();
     break;
   default: 
     drawScanScreen(); 
@@ -196,6 +199,13 @@ void draw() {
   text(screenTitle, width/2, fontSize * 1.5);
   
 
+}
+
+void drawUnrecognizedScreen() {
+  pushStyle();
+  textAlign(CENTER, CENTER);
+  text("Sorry! Your badge is unrecognized.\nWould you like to rewrite it?\nScan again to enter edit mode.", width/2, height/2);
+  popStyle();
 }
 
 void drawScanScreen() {
@@ -251,6 +261,8 @@ void clearScreen() {
   widgetContainer.removeWidget(nameField);
   widgetContainer.removeWidget(emailField);
   widgetContainer.removeWidget(phoneField);
+  changesMade = false;
+  ketaiNFC.cancelWrite();
 }
 
 void setupWriteScreen(int x, int y) {
@@ -269,6 +281,7 @@ void setupWriteScreen(int x, int y) {
   emailField.setNextEditText( emailField );
   emailField.setInputType(InputType.TYPE_CLASS_TEXT);
   emailField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+  emailField.setText("example@email.com");
   
   phoneField = new APEditText(x + x_offset, int(y+fontSize * 5) + y_offset, width/2, 100);
   widgetContainer.addWidget( phoneField );
@@ -276,6 +289,7 @@ void setupWriteScreen(int x, int y) {
   phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
   phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
   phoneField.setCloseImeOnDone(true);
+  phoneField.setText("(123) 123-1234");
 }
 
 void drawDeviceScreen() {
@@ -333,6 +347,12 @@ void onClickWidget(APWidget widget) {
     screenTitle = "Scanning Mode";
     currentScreen = SCAN_MODE;
     clearScreen();
+  } else if (widget == userListButton) {
+    db.query("SELECT * FROM users");
+    println("User records:");
+    while (db.next()) {
+      println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\t" + db.getString("UID"));
+    }
   } else if (widget == nameField || widget == emailField || widget == phoneField) {
     // Update write buffer with changes made to text fields
     updateWriteBuffer();
@@ -344,7 +364,8 @@ void onClickWidget(APWidget widget) {
 void onNFCWrite(boolean result, String message)
 {
   if (result) {
-    println("Success writing tag!");
+    println("Success writing tag! Updating database...");
+    updateRecord(tagWriteBuffer);
     changesMade = false;
   } else {
     println("Failed to write tag: " + message);
@@ -364,15 +385,30 @@ void mousePressed() {
  * Utility Functions
  */
  
+boolean updateRecord(String[] buffer) {
+  // Determine which table to update
+  if (buffer[4].equals("USER_TAG")) {
+    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('" + buffer[0] +"', '" + buffer[1] +"', '" + buffer[2] +"', '" + buffer[3] +"');")) {
+      println("Added " + buffer[0] + " to users");
+      return true;
+    } else if (db.execute("UPDATE users SET name='" + buffer[0] + "',email='"+ buffer[1] + "',phone='" + buffer[2] + "' WHERE uid='" +buffer[3]+"';")) {
+      println("Updated " + buffer[0] + ".");
+      return true;
+    }
+  } else {
+  }
+  return false;
+}
+ 
 // Look up badge ID and associated equipment/user
 int findUser(String txt) {
   println("Finding user with badge " + txt);
-  db.query("SELECT * FROM users WHERE UID LIKE '"+ txt + "';");
+  db.query("SELECT * FROM users WHERE UID LIKE'"+ txt + "';");
   while (db.next ())
   {
     currentScreen = USER_PROFILE_MODE;
     println("User found:");
-    println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\tID Badge: " + db.getString("badge"));
+    println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\tID Badge: " + db.getString("UID"));
     return db.getInt("id");
   }
   
@@ -441,7 +477,7 @@ void updateWriteBuffer() {
 void writeTag(String[] tagWriteBuffer) {
    String tagContents = "";
    // If tag is user type, then prefix with 1:
-   if (tagWriteBuffer[4] == "USER_TAG") {
+   if (tagWriteBuffer[4].equals("USER_TAG")) {
      tagContents = str(USER_TAG) + ":" + tagWriteBuffer[3];
      // Update user table with other info
    } else { // If tag is equipment type, then prefix with 2:
