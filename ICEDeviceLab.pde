@@ -66,6 +66,10 @@ public static final String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTE
 public static final int USER_TAG = 1;
 public static final int EQUIPMENT_TAG = 2;
 
+public static final int CHECKED_IN = 0;
+public static final int CHECKED_OUT = 1;
+
+
 int lastTagID = 0;
 int lastTagType = 0;
 String lastTagUID = "";
@@ -305,10 +309,11 @@ void drawWriteScreen() {
   popStyle();
 }
 
+void drawActivityScreen() {
+  
+}
+
 void clearScreen() {
-//  widgetContainer.removeWidget(phoneField);
-//  widgetContainer.removeWidget(emailField);
-//  widgetContainer.removeWidget(nameField);
   writeContainer.hide();
   changesMade = false;
   ketaiNFC.cancelWrite();
@@ -316,13 +321,7 @@ void clearScreen() {
 
 void setupWriteScreen(int x, int y) {
   currentScreen = CREATE_MODE;
-
-  
-  nameField.getView().setVisibility(0);
-  emailField.getView().setVisibility(0);
-  phoneField.getView().setVisibility(0);
-  
-
+  writeContainer.show();
 }
 
 
@@ -334,8 +333,12 @@ void setupWriteScreen(int x, int y) {
  
 void onNFCEvent(String txt)
 {
+  boolean repeatScan = false;
+  
+  // Provide haptic feedback
+  vibe.vibrate(200);
+
   // Check to see if the format is compatible (i.e. if the : delimiter is in the right place)
-  vibe.vibrate(1000);
   if (txt.indexOf(":") == 1) {
     int badgeType = 0;
     String badgeContents = "";
@@ -345,40 +348,51 @@ void onNFCEvent(String txt)
     
     if (txt.equals(lastScan)) {
       println("Repeat scan detected.");
-      
-      if (currentScreen == USER_PROFILE_MODE) {
-        setupWriteScreen(100, 150);
-      } else if (currentScreen == UNRECOGNIZED_MODE) {
-        setupWriteScreen(100, 150);
-      }
+      repeatScan = true;
     }
     
     // Check to see if it's a recognized badge type
     if (badgeType == USER_TAG) {
       clearScreen();
       currentUser = findUser(badgeContents);
-      scanText = "User Badge";
+      
+      if (lastTagType == EQUIPMENT_TAG && currentEquipment != null) {
+        updateCheckout( currentUser, currentEquipment );
+      }
 
     } else if (badgeType == EQUIPMENT_TAG) {
       clearScreen();
       currentEquipment = findEquipment(badgeContents);
-      scanText = "Equipment Badge";
+      
+      if (lastTagType == USER_TAG && currentUser != null) {
+        updateCheckout( currentUser, currentEquipment );
+      }
+
     }  else {
       //  Unrecognized badge type. Enter creation mode
       clearScreen();
       println("Not a recognized badge type. Reprogram?");
       currentScreen = UNRECOGNIZED_MODE;
-    }  
+    }
     
-    // Remember the last badge scan for repeat actions
+    // If this is a valid badge and a repeat scan, take them to Edit Mode
+    if (repeatScan) {
+      println("Sending to write screen...");
+      setupWriteScreen(100, 150);
+    }
+    
+    // Remember the last valid badge scan for repeat actions
     lastTagType = badgeType;
     lastTagUID = badgeContents;
     lastScan = txt;
   } else {
+    
       // Incompatible format
       currentScreen = UNRECOGNIZED_MODE;
       println("Unrecognized format. Reprogram?");
   }
+  
+
 }
 
 void onClickWidget(APWidget widget) {
@@ -387,6 +401,7 @@ void onClickWidget(APWidget widget) {
   } else if (widget == readButton && currentScreen != SCAN_MODE) {
     screenTitle = "Scanning Mode";
     currentScreen = SCAN_MODE;
+    resetScanner();
     clearScreen();
   } else if (widget == userListButton) {
     db.query("SELECT * FROM users");
@@ -514,6 +529,56 @@ String generateUID() {
   }
   
   return UID;
+}
+
+int getEquipmentCheckoutStatus( Equipment equipment ) {  
+  int status = -1;
+  // Check to see if equipment is already checked out
+  db.query("SELECT * FROM activity WHERE id_equipment="+ equipment.id +" ORDER BY id DESC LIMIT 1;");
+  while (db.next ())
+  {
+      status = db.getInt("checkout");
+      if (status == CHECKED_OUT)
+        println("Currently checked OUT.");
+      else
+        println("Currently checked IN.");
+      return status;
+  }
+  
+  println("No previous activity found.");
+  return status;
+}
+
+// Resets the scanner by clearing the last scanned data.
+void resetScanner() {
+  lastTagID = 0;
+  lastTagType = 0;
+  lastTagUID = "";
+  lastScan = "";
+}
+
+// Checks the device in/out
+void updateCheckout(User user, Equipment equipment) {
+  int checkoutStatus = getEquipmentCheckoutStatus( equipment );
+  
+  // If no previous activity, or currently CHECKED_IN, then checkout
+  if ( checkoutStatus == -1 || checkoutStatus == CHECKED_IN ) {
+    // Add record linking this equipment and user
+    if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_OUT +");") == true) {
+      println("Successfully checked the " + equipment.name + " out to " + user.name + "!");
+    } else {
+      println("Checkout failed. :(");
+    }
+  } else { // Looks like device was previously checked out. Check that baby in!
+    if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_IN +");") == true) {
+      println( user.name + " successfully checked the " + equipment.name + " in!");
+    } else {
+      println("Checkin failed :(");
+    }
+  }
+ 
+  // Clear any previous scans before moving on. Prevents accidental checkouts.
+  resetScanner();
 }
 
 // Update the write buffer and prepare for writing
