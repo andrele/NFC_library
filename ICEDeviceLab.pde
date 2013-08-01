@@ -39,7 +39,6 @@
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
-import android.view.*;
 import android.view.inputmethod.EditorInfo;
 
 import ketai.data.*;
@@ -52,9 +51,11 @@ import apwidgets.*;
 // Initialize global variables
 KetaiSQLite db;
 KetaiNFC ketaiNFC;
+KetaiVibrate vibe;
 
 // Setup Buttons and Text Fields
-APWidgetContainer widgetContainer;
+APWidgetContainer mainContainer;
+APWidgetContainer writeContainer;
 APButton writeButton, readButton, userListButton;
 APEditText nameField, emailField, phoneField;
 
@@ -149,14 +150,19 @@ void setup()
   strokeWeight(5);
   currentScreen = SCAN_MODE;
   
-  // Native Android Widgets
-  widgetContainer = new APWidgetContainer(this); // create new container for widgets
+  // Main Android Widgets
+  vibe = new KetaiVibrate(this);
+  
+  mainContainer = new APWidgetContainer(this); // create new main container
   writeButton = new APButton(width/3, height - fontSize*3, "Write NFC Tag");
   readButton = new APButton(width/3*2, height - fontSize*3, "Read NFC Tag");
   userListButton = new APButton(0, height - fontSize*3, "User List");
-  widgetContainer.addWidget(writeButton);
-  widgetContainer.addWidget(readButton);
-  widgetContainer.addWidget(userListButton);
+  mainContainer.addWidget(writeButton);
+  mainContainer.addWidget(readButton);
+  mainContainer.addWidget(userListButton);
+
+
+ // Write Android Widgets
 
   int x_offset = 300;
   int y_offset = 100;
@@ -164,6 +170,8 @@ void setup()
   String email = "example@email.com";
   String phone = "(123) 123-1234)";
   newUID = generateUID();
+  
+  writeContainer = new APWidgetContainer(this); // Create container for write fields
   
   if (currentUser != null) {
     name = currentUser.name;
@@ -175,26 +183,25 @@ void setup()
   emailField = new APEditText(x_offset, int(fontSize * 2.5) + y_offset, width/2, 100);
   phoneField = new APEditText(x_offset, int(fontSize * 5) + y_offset, width/2, 100);
   
-//    widgetContainer.addWidget( nameField );
-//    nameField.getView().setVisibility(View.INVISIBLE);
-//    nameField.setInputType(InputType.TYPE_CLASS_TEXT);
-//    nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-//    nameField.setText(name);
-//  
-//    widgetContainer.addWidget( emailField );
-//    emailField.getView().setVisibility(View.INVISIBLE);
-//    emailField.setNextEditText( emailField );
-//    emailField.setInputType(InputType.TYPE_CLASS_TEXT);
-//    emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-//    emailField.setText(email);
-//  
-//    widgetContainer.addWidget( phoneField );
-//    phoneField.getView().setVisibility(View.INVISIBLE);
-//    phoneField.setNextEditText( phoneField );
-//    phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
-//    phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
-//    phoneField.setCloseImeOnDone(true);
-//    phoneField.setText(phone);
+    writeContainer.addWidget( nameField );
+    nameField.setInputType(InputType.TYPE_CLASS_TEXT);
+    nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+    nameField.setText(name);
+  
+    writeContainer.addWidget( emailField );
+    emailField.setNextEditText( emailField );
+    emailField.setInputType(InputType.TYPE_CLASS_TEXT);
+    emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+    emailField.setText(email);
+  
+    writeContainer.addWidget( phoneField );
+    phoneField.setNextEditText( phoneField );
+    phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
+    phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+    phoneField.setCloseImeOnDone(true);
+    phoneField.setText(phone);
+    
+    writeContainer.hide(); // Hide the write container for now 
 }
 
 void draw() {
@@ -302,9 +309,7 @@ void clearScreen() {
 //  widgetContainer.removeWidget(phoneField);
 //  widgetContainer.removeWidget(emailField);
 //  widgetContainer.removeWidget(nameField);
-  phoneField.getView().setVisibility(8);
-  emailField.getView().setVisibility(8);
-  nameField.getView().setVisibility(8);
+  writeContainer.hide();
   changesMade = false;
   ketaiNFC.cancelWrite();
 }
@@ -330,6 +335,7 @@ void setupWriteScreen(int x, int y) {
 void onNFCEvent(String txt)
 {
   // Check to see if the format is compatible (i.e. if the : delimiter is in the right place)
+  vibe.vibrate(1000);
   if (txt.indexOf(":") == 1) {
     int badgeType = 0;
     String badgeContents = "";
@@ -349,14 +355,17 @@ void onNFCEvent(String txt)
     
     // Check to see if it's a recognized badge type
     if (badgeType == USER_TAG) {
+      clearScreen();
       currentUser = findUser(badgeContents);
       scanText = "User Badge";
 
     } else if (badgeType == EQUIPMENT_TAG) {
+      clearScreen();
       currentEquipment = findEquipment(badgeContents);
       scanText = "Equipment Badge";
     }  else {
       //  Unrecognized badge type. Enter creation mode
+      clearScreen();
       println("Not a recognized badge type. Reprogram?");
       currentScreen = UNRECOGNIZED_MODE;
     }  
