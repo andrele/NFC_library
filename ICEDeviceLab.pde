@@ -278,14 +278,19 @@ void drawProfileScreen() {
   popStyle();
 }
 
+
+
 void drawEquipmentScreen() {
-  screenTitle = "Equipment Profile";
-  pushStyle();
   int x_offset = width/3;
   int y_offset = 150;
+  screenTitle = "Equipment Profile";
+  
+  pushStyle();
+  
   textAlign(LEFT, CENTER);
   text(currentEquipment.name, x_offset, y_offset);
   text(currentEquipment.description, x_offset, y_offset + (fontSize * 2.5));
+  text(equipmentStatus( currentEquipment), x_offset, y_offset + (fontSize * 5));
   popStyle();
 }
 
@@ -358,6 +363,7 @@ void onNFCEvent(String txt)
       
       if (lastTagType == EQUIPMENT_TAG && currentEquipment != null) {
         updateCheckout( currentUser, currentEquipment );
+        return;
       }
 
     } else if (badgeType == EQUIPMENT_TAG) {
@@ -366,6 +372,7 @@ void onNFCEvent(String txt)
       
       if (lastTagType == USER_TAG && currentUser != null) {
         updateCheckout( currentUser, currentEquipment );
+        return;
       }
 
     }  else {
@@ -377,7 +384,7 @@ void onNFCEvent(String txt)
     
     // If this is a valid badge and a repeat scan, take them to Edit Mode
     if (repeatScan) {
-      println("Sending to write screen...");
+      println("Entering edit mode");
       setupWriteScreen(100, 150);
     }
     
@@ -385,6 +392,7 @@ void onNFCEvent(String txt)
     lastTagType = badgeType;
     lastTagUID = badgeContents;
     lastScan = txt;
+    println("Remembering last scan");
   } else {
     
       // Incompatible format
@@ -494,8 +502,11 @@ Equipment findEquipment(String txt) {
     foundEquipment.name = db.getString("name");
     foundEquipment.description = db.getString("description");
     foundEquipment.UID = db.getString("UID");
+    foundEquipment.status = getEquipmentCheckoutStatus( foundEquipment );
+    
     println("Equipment found:");
-    println(foundEquipment.name + "\t" + foundEquipment.description + "\tID Badge: " + foundEquipment.UID);
+    println(foundEquipment.name + "\t" + foundEquipment.description + "\tID Badge: " + foundEquipment.UID + "\tStatus: " + equipmentStatus( foundEquipment ) );
+    
     return foundEquipment;
   }
   
@@ -551,6 +562,7 @@ int getEquipmentCheckoutStatus( Equipment equipment ) {
 
 // Resets the scanner by clearing the last scanned data.
 void resetScanner() {
+  println("Clearing scanner cache");
   lastTagID = 0;
   lastTagType = 0;
   lastTagUID = "";
@@ -559,7 +571,7 @@ void resetScanner() {
 
 // Checks the device in/out
 void updateCheckout(User user, Equipment equipment) {
-  int checkoutStatus = getEquipmentCheckoutStatus( equipment );
+  int checkoutStatus = equipment.status;
   
   // If no previous activity, or currently CHECKED_IN, then checkout
   if ( checkoutStatus == -1 || checkoutStatus == CHECKED_IN ) {
@@ -576,7 +588,6 @@ void updateCheckout(User user, Equipment equipment) {
       println("Checkin failed :(");
     }
   }
- 
   // Clear any previous scans before moving on. Prevents accidental checkouts.
   resetScanner();
 }
@@ -593,6 +604,14 @@ void updateWriteBuffer() {
     writeTag(tagWriteBuffer);
 }
 
+String equipmentStatus( Equipment eq ) {
+  if (eq.status == CHECKED_OUT)
+    return "Checked out";
+  else if (eq.status == CHECKED_IN)
+    return "Checked in";
+  else
+    return "Unknown";
+}
 
 // Write the tag using the buffer
 void writeTag(String[] tagWriteBuffer) {
