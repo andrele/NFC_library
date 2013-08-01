@@ -39,6 +39,7 @@
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.*;
 import android.view.inputmethod.EditorInfo;
 
 import ketai.data.*;
@@ -64,6 +65,7 @@ public static final String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTE
 public static final int USER_TAG = 1;
 public static final int EQUIPMENT_TAG = 2;
 
+int lastTagID = 0;
 int lastTagType = 0;
 String lastTagUID = "";
 String lastScan = "";
@@ -155,12 +157,44 @@ void setup()
   widgetContainer.addWidget(writeButton);
   widgetContainer.addWidget(readButton);
   widgetContainer.addWidget(userListButton);
-  
+
   int x_offset = 300;
   int y_offset = 100;
+  String name = "Test";
+  String email = "example@email.com";
+  String phone = "(123) 123-1234)";
+  newUID = generateUID();
+  
+  if (currentUser != null) {
+    name = currentUser.name;
+    email = currentUser.email;
+    phone = currentUser.phone;
+  }
+  
   nameField = new APEditText(x_offset, y_offset, width/2, 100);
   emailField = new APEditText(x_offset, int(fontSize * 2.5) + y_offset, width/2, 100);
   phoneField = new APEditText(x_offset, int(fontSize * 5) + y_offset, width/2, 100);
+  
+//    widgetContainer.addWidget( nameField );
+//    nameField.getView().setVisibility(View.INVISIBLE);
+//    nameField.setInputType(InputType.TYPE_CLASS_TEXT);
+//    nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+//    nameField.setText(name);
+//  
+//    widgetContainer.addWidget( emailField );
+//    emailField.getView().setVisibility(View.INVISIBLE);
+//    emailField.setNextEditText( emailField );
+//    emailField.setInputType(InputType.TYPE_CLASS_TEXT);
+//    emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+//    emailField.setText(email);
+//  
+//    widgetContainer.addWidget( phoneField );
+//    phoneField.getView().setVisibility(View.INVISIBLE);
+//    phoneField.setNextEditText( phoneField );
+//    phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
+//    phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+//    phoneField.setCloseImeOnDone(true);
+//    phoneField.setText(phone);
 }
 
 void draw() {
@@ -265,43 +299,25 @@ void drawWriteScreen() {
 }
 
 void clearScreen() {
-  widgetContainer.removeWidget(phoneField);
-  widgetContainer.removeWidget(emailField);
-  widgetContainer.removeWidget(nameField);
+//  widgetContainer.removeWidget(phoneField);
+//  widgetContainer.removeWidget(emailField);
+//  widgetContainer.removeWidget(nameField);
+  phoneField.getView().setVisibility(8);
+  emailField.getView().setVisibility(8);
+  nameField.getView().setVisibility(8);
   changesMade = false;
   ketaiNFC.cancelWrite();
 }
 
 void setupWriteScreen(int x, int y) {
   currentScreen = CREATE_MODE;
-  String name = "Test";
-  String email = "example@email.com";
-  String phone = "(123) 123-1234)";
-  newUID = generateUID();
+
   
-  if (currentUser != null) {
-    name = currentUser.name;
-    email = currentUser.email;
-    phone = currentUser.phone;
-  }
+  nameField.getView().setVisibility(0);
+  emailField.getView().setVisibility(0);
+  phoneField.getView().setVisibility(0);
   
-    widgetContainer.addWidget( nameField );
-    nameField.setInputType(InputType.TYPE_CLASS_TEXT);
-    nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-    nameField.setText(name);
-  
-    widgetContainer.addWidget( emailField );
-    emailField.setNextEditText( emailField );
-    emailField.setInputType(InputType.TYPE_CLASS_TEXT);
-    emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-    emailField.setText(email);
-  
-    widgetContainer.addWidget( phoneField );
-    phoneField.setNextEditText( phoneField );
-    phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
-    phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
-    phoneField.setCloseImeOnDone(true);
-    phoneField.setText(phone);
+
 }
 
 
