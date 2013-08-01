@@ -305,8 +305,15 @@ void drawWriteScreen() {
   text("Email", x_offset, y_offset + (fontSize * 2.5));
   text("Phone", x_offset, y_offset + (fontSize * 5));
   textAlign(CENTER, CENTER);
-  text("New generated UID", width/2, y_offset + (fontSize * 7.5));
-  text( newUID, width/2, y_offset + (fontSize * 9));
+  
+  if (currentUser.UID.equals("")) {
+    text("New generated UID", width/2, y_offset + (fontSize * 7.5));
+    text( newUID, width/2, y_offset + (fontSize * 9));
+  } else {
+    text("Existing UID", width/2, y_offset + (fontSize * 7.5));
+    text( currentUser.UID, width/2, y_offset + (fontSize * 9));
+  }
+  
   if (changesMade) {
     text("Changes detected. Tap tag to rewrite", width/2, y_offset + (fontSize * 10.5));
   }
@@ -326,10 +333,12 @@ void clearScreen() {
 
 void setupWriteScreen(int x, int y) {
   currentScreen = CREATE_MODE;
+  newUID = generateUID();
+  nameField.setText( currentUser.name );
+  emailField.setText( currentUser.email );
+  phoneField.setText( currentUser.phone );
   writeContainer.show();
 }
-
-
 
 
 /*
@@ -380,12 +389,15 @@ void onNFCEvent(String txt)
       clearScreen();
       println("Not a recognized badge type. Reprogram?");
       currentScreen = UNRECOGNIZED_MODE;
+      return;
     }
     
     // If this is a valid badge and a repeat scan, take them to Edit Mode
     if (repeatScan) {
       println("Entering edit mode");
       setupWriteScreen(100, 150);
+      resetScanner();
+      return;
     }
     
     // Remember the last valid badge scan for repeat actions
@@ -398,6 +410,7 @@ void onNFCEvent(String txt)
       // Incompatible format
       currentScreen = UNRECOGNIZED_MODE;
       println("Unrecognized format. Reprogram?");
+      resetScanner();
   }
   
 
@@ -480,6 +493,7 @@ User findUser(String txt) {
     foundUser.email = db.getString("email");
     foundUser.phone = db.getString("phone");
     foundUser.id = db.getInt("id");
+    foundUser.UID = db.getString("UID");
     println("User found:");
     println(foundUser.name + "\t" + foundUser.email + "\t" + foundUser.phone + "\tID Badge: " + foundUser.id);
     
@@ -597,7 +611,10 @@ void updateWriteBuffer() {
     tagWriteBuffer[0] = nameField.getText();
     tagWriteBuffer[1] = emailField.getText();
     tagWriteBuffer[2] = phoneField.getText();
-    tagWriteBuffer[3] = newUID;
+    if (currentUser.UID.equals(""))
+      tagWriteBuffer[3] = newUID;
+    else
+      tagWriteBuffer[3] = currentUser.UID;
     tagWriteBuffer[4] = "USER_TAG";
     println("Write buffer updated with: " + tagWriteBuffer[0] + " " + tagWriteBuffer[1] + " " + tagWriteBuffer[2] + " " + tagWriteBuffer[3] + " " + tagWriteBuffer[4]);
     changesMade = true;
