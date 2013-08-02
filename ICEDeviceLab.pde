@@ -82,14 +82,20 @@ public static final int CREATE_MODE = 2;
 public static final int USER_PROFILE_MODE = 3;
 public static final int EQUIPMENT_PROFILE_MODE = 4;
 public static final int UNRECOGNIZED_MODE = 5;
+public static final int CONFIRMATION_MODE = 6;
 int currentScreen = 0;
 User currentUser;
 Equipment currentEquipment;
 String scanText = "Scan NFC Tag";
 String screenTitle = "";
+String confirmationText = "";
 float rotation = 0;
-int fontSize = 36;
+int fontSize = 48;
 Boolean changesMade = false;
+
+String nameText = "Test";
+String emailText = "example@email.com";
+String phoneText = "(123) 123-1234)";
 
 PFont font;
 
@@ -170,17 +176,14 @@ void setup()
 
   int x_offset = 300;
   int y_offset = 100;
-  String name = "Test";
-  String email = "example@email.com";
-  String phone = "(123) 123-1234)";
   newUID = generateUID();
   
   writeContainer = new APWidgetContainer(this); // Create container for write fields
   
   if (currentUser != null) {
-    name = currentUser.name;
-    email = currentUser.email;
-    phone = currentUser.phone;
+    nameText = currentUser.name;
+    emailText = currentUser.email;
+    phoneText = currentUser.phone;
   }
   
   nameField = new APEditText(x_offset, y_offset, width/2, 100);
@@ -190,20 +193,20 @@ void setup()
     writeContainer.addWidget( nameField );
     nameField.setInputType(InputType.TYPE_CLASS_TEXT);
     nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-    nameField.setText(name);
+    nameField.setText(nameText);
   
     writeContainer.addWidget( emailField );
     emailField.setNextEditText( emailField );
     emailField.setInputType(InputType.TYPE_CLASS_TEXT);
     emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-    emailField.setText(email);
+    emailField.setText(emailText);
   
     writeContainer.addWidget( phoneField );
     phoneField.setNextEditText( phoneField );
     phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
     phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
     phoneField.setCloseImeOnDone(true);
-    phoneField.setText(phone);
+    phoneField.setText(phoneText);
     
     writeContainer.hide(); // Hide the write container for now 
 }
@@ -224,6 +227,9 @@ void draw() {
   case EQUIPMENT_PROFILE_MODE:
     drawEquipmentScreen();
     break;
+  case CONFIRMATION_MODE:
+    drawConfirmationScreen();
+    break;
   case UNRECOGNIZED_MODE:
     drawUnrecognizedScreen();
     break;
@@ -233,7 +239,7 @@ void draw() {
   }
   
   // Persistent UI
-  text(screenTitle, width/2, fontSize * 1.5);
+  //text(screenTitle, width/2, fontSize * 1.5);
   
 
 }
@@ -241,11 +247,18 @@ void draw() {
 /*
  * Drawing subroutines
  */
+ 
+void drawConfirmationScreen() {
+  pushStyle();
+  textAlign(CENTER, CENTER);
+  text(confirmationText, width/2, height/2);
+  popStyle();
+}
 
 void drawUnrecognizedScreen() {
   pushStyle();
   textAlign(CENTER, CENTER);
-  text("Sorry! Your badge is unrecognized.\nWould you like to rewrite it?\nTap the screen to enter edit mode.", width/2, height/2);
+  text("Sorry! Your badge is unrecognized.\nWould you like to rewrite it?\nScan the tag again to enter edit mode.", width/2, height/2);
   popStyle();
 }
 
@@ -259,9 +272,12 @@ void drawScanScreen() {
   }
   pushMatrix();
   translate(width/2, height/2);
+  pushStyle();
+  textSize(fontSize);
+  popStyle();
   text(scanText, 0, 0);
-  rotate(radians(rotation));
-  arc(0, 0, width/2, width/2, PI, PI*2);
+//  rotate(radians(rotation));
+//  arc(0, 0, width/2, width/2, PI, PI*2);
   popMatrix();
 }
 
@@ -306,7 +322,7 @@ void drawWriteScreen() {
   text("Phone", x_offset, y_offset + (fontSize * 5));
   textAlign(CENTER, CENTER);
   
-  if (currentUser.UID.equals("")) {
+  if (currentUser == null || currentUser.UID.equals("")) {
     text("New generated UID", width/2, y_offset + (fontSize * 7.5));
     text( newUID, width/2, y_offset + (fontSize * 9));
   } else {
@@ -334,10 +350,19 @@ void clearScreen() {
 void setupWriteScreen(int x, int y) {
   currentScreen = CREATE_MODE;
   newUID = generateUID();
-  nameField.setText( currentUser.name );
-  emailField.setText( currentUser.email );
-  phoneField.setText( currentUser.phone );
+  if (currentUser != null) {
+    nameField.setText( currentUser.name );
+    emailField.setText( currentUser.email );
+    phoneField.setText( currentUser.phone );
+  }
+  
   writeContainer.show();
+  
+}
+
+void setupConfirmationScreen() {
+  resetScanner();
+  clearScreen();
 }
 
 
@@ -591,13 +616,18 @@ void updateCheckout(User user, Equipment equipment) {
   if ( checkoutStatus == -1 || checkoutStatus == CHECKED_IN ) {
     // Add record linking this equipment and user
     if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_OUT +");") == true) {
-      println("Successfully checked the " + equipment.name + " out to " + user.name + "!");
+      confirmationText = "Successfully checked the " + equipment.name + " out to " + user.name + "!";
+      println(confirmationText);
+      setupConfirmationScreen();
     } else {
       println("Checkout failed. :(");
     }
   } else { // Looks like device was previously checked out. Check that baby in!
     if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_IN +");") == true) {
-      println( user.name + " successfully checked the " + equipment.name + " in!");
+      confirmationText = user.name + " successfully checked the " + equipment.name + " in!";
+      println(confirmationText);
+      setupConfirmationScreen();
+      
     } else {
       println("Checkin failed :(");
     }
