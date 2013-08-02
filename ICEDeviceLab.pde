@@ -52,11 +52,16 @@ import apwidgets.*;
 KetaiSQLite db;
 KetaiNFC ketaiNFC;
 KetaiVibrate vibe;
+KetaiList userKList;
+KetaiList eqKList;
+
+ArrayList<String> usersList = new ArrayList<String>();
+ArrayList<String> equipmentList = new ArrayList<String>();
 
 // Setup Buttons and Text Fields
 APWidgetContainer mainContainer;
 APWidgetContainer writeContainer;
-APButton writeButton, readButton, userListButton;
+APButton writeButton, readButton, userListButton, eqListButton;
 APEditText nameField, emailField, phoneField;
 
 public static final String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
@@ -167,9 +172,11 @@ void setup()
   writeButton = new APButton(width/3, height - fontSize*3, "Write NFC Tag");
   readButton = new APButton(width/3*2, height - fontSize*3, "Read NFC Tag");
   userListButton = new APButton(0, height - fontSize*3, "User List");
+  eqListButton = new APButton(0, int(height - fontSize * 4.5), "Device List");
   mainContainer.addWidget(writeButton);
   mainContainer.addWidget(readButton);
   mainContainer.addWidget(userListButton);
+  mainContainer.addWidget(eqListButton);
 
 
  // Write Android Widgets
@@ -441,7 +448,7 @@ void onNFCEvent(String txt)
 
 }
 
-void onClickWidget(APWidget widget) {
+void onClickWidget(APWidget widget) {  
   if (widget == writeButton && currentScreen != CREATE_MODE) {
     setupWriteScreen( 100, 150 );
   } else if (widget == readButton && currentScreen != SCAN_MODE) {
@@ -450,15 +457,20 @@ void onClickWidget(APWidget widget) {
     resetScanner();
     clearScreen();
   } else if (widget == userListButton) {
-    db.query("SELECT * FROM users");
-    println("User records:");
-    while (db.next()) {
-      println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\t" + db.getString("UID"));
-    }
+    updateUserList();
+    userKList = new KetaiList(this, usersList);
+  } else if (widget == eqListButton) {
+    updateEqList();
+    eqKList = new KetaiList(this, equipmentList);
   } else if (widget == nameField || widget == emailField || widget == phoneField) {
     // Update write buffer with changes made to text fields
     updateWriteBuffer();
   }
+}
+
+void onKetaiListSelection(KetaiList klist) {
+  String selection = klist.getSelection();
+  println( "Selected " + selection);
 }
 
 void onNFCWrite(boolean result, String message)
@@ -649,6 +661,26 @@ void updateWriteBuffer() {
     println("Write buffer updated with: " + tagWriteBuffer[0] + " " + tagWriteBuffer[1] + " " + tagWriteBuffer[2] + " " + tagWriteBuffer[3] + " " + tagWriteBuffer[4]);
     changesMade = true;
     writeTag(tagWriteBuffer);
+}
+
+void updateUserList() {
+    db.query("SELECT * FROM users");
+    println("User records:");
+    usersList.clear();
+    while (db.next()) {
+      usersList.add(db.getString("name"));
+      println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\t" + db.getString("UID"));
+    }
+}
+
+void updateEqList() {
+    db.query("SELECT * FROM equipment");
+    println("Device records:");
+    equipmentList.clear();
+    while (db.next()) {
+      equipmentList.add(db.getString("name"));
+      println(db.getString("name") + "\t" + db.getString("description") + "\t" + db.getString("UID"));
+    }
 }
 
 String equipmentStatus( Equipment eq ) {
