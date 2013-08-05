@@ -145,7 +145,7 @@ void setup()
     // Create an entry for testing
     if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', 'pXqsnJE1Ja5Ysatm');"))
       println("Added Andre Le to users");
-    if (db.execute("INSERT INTO equipment ('name', 'description', 'UID', 'checkout') VALUES ('Samsung S4', 'Best phone ever!', 'lGVQgmAsqOalY6bV', 1);"))
+    if (db.execute("INSERT INTO equipment ('name', 'description', 'UID', 'checkout') VALUES ('Samsung S4', 'Best phone ever!', 'lGVQgmAsqOalY6bV', " + CHECKED_OUT + ");"))
       println("Added Samsung S4 to equipment");
     if (db.execute("INSERT INTO activity ('id_equipment', 'id_users', 'checkout') VALUES (1, 1, 1);"))
       println("Added S4 checkout to Andre");
@@ -320,6 +320,7 @@ void onNFCEvent(String txt)
     if (badgeType == USER_TAG) {
       clearScreen();
       currentUser = findUser(badgeContents);
+      currentScreen = USER_PROFILE_MODE;
       
       if (lastTagType == EQUIPMENT_TAG && currentEquipment != null) {
         updateCheckout( currentUser, currentEquipment );
@@ -329,6 +330,8 @@ void onNFCEvent(String txt)
     } else if (badgeType == EQUIPMENT_TAG) {
       clearScreen();
       currentEquipment = findEquipment(badgeContents);
+      currentScreen = EQUIPMENT_PROFILE_MODE;
+
       
       if (lastTagType == USER_TAG && currentUser != null) {
         updateCheckout( currentUser, currentEquipment );
@@ -391,7 +394,10 @@ void onClickWidget(APWidget widget) {
     eqKList = new KetaiList(this, equipmentList);
   } else if (widget == nameField || widget == emailField || widget == phoneField) {
     // Update write buffer with changes made to text fields
-    updateWriteBuffer();
+    if (eqBadgeButton.isChecked())
+      updateWriteBuffer(EQUIPMENT_TAG);
+    else
+      updateWriteBuffer(USER_TAG);
   } else if (widget == eqBadgeButton) {  // Check for badge type toggling
     setupWriteScreen( EQUIPMENT_TAG );
   } else if (widget == userBadgeButton) {

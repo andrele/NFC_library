@@ -50,7 +50,7 @@ User findUser(String txt) {
   db.query("SELECT * FROM users WHERE UID LIKE'"+ txt + "';");
   while (db.next ())
   {
-    currentScreen = USER_PROFILE_MODE;
+
     foundUser.name = db.getString("name");
     foundUser.email = db.getString("email");
     foundUser.phone = db.getString("phone");
@@ -73,7 +73,6 @@ Equipment findEquipment(String txt) {
   db.query("SELECT * FROM equipment WHERE UID LIKE '"+ txt + "';");
   while (db.next ())
   {
-    currentScreen = EQUIPMENT_PROFILE_MODE;
     foundEquipment.id = db.getInt("id");
     foundEquipment.name = db.getString("name");
     foundEquipment.description = db.getString("description");
@@ -176,7 +175,8 @@ void updateCheckout(User user, Equipment equipment) {
 }
 
 // Update the write buffer and prepare for writing
-void updateWriteBuffer() {
+void updateWriteBuffer(int tagType) {
+  if (tagType == USER_TAG) {
     tagWriteBuffer[0] = nameField.getText();
     tagWriteBuffer[1] = emailField.getText();
     tagWriteBuffer[2] = phoneField.getText();
@@ -185,6 +185,16 @@ void updateWriteBuffer() {
     else
       tagWriteBuffer[3] = currentUser.UID;
     tagWriteBuffer[4] = "USER_TAG";
+  } else {
+    tagWriteBuffer[0] = eqNameField.getText();
+    tagWriteBuffer[1] = eqDescriptionField.getText();
+    if (currentEquipment.UID.equals(""))
+      tagWriteBuffer[3] = newUID;
+    else
+      tagWriteBuffer[3] = currentEquipment.UID;
+    tagWriteBuffer[4] = "EQUIPMENT_TAG";
+  }
+  
     println("Write buffer updated with: " + tagWriteBuffer[0] + " " + tagWriteBuffer[1] + " " + tagWriteBuffer[2] + " " + tagWriteBuffer[3] + " " + tagWriteBuffer[4]);
     changesMade = true;
     writeTag(tagWriteBuffer);
@@ -195,7 +205,7 @@ void updateUserList() {
     println("User records:");
     usersList.clear();
     while (db.next()) {
-      usersList.add(db.getString("name"));
+      usersList.add(db.getString("name") + " / " + db.getString("email"));
       println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\t" + db.getString("UID"));
     }
 }
@@ -205,8 +215,17 @@ void updateEqList() {
     println("Device records:");
     equipmentList.clear();
     while (db.next()) {
-      equipmentList.add(db.getString("name"));
-      println(db.getString("name") + "\t" + db.getString("dcheescription") + "\t" + db.getString("UID"));
+      String equipment = db.getString("name");
+      String user = null;
+      if ( db.getInt("checkout") == CHECKED_OUT ) {
+        user = " / " + findUserByEquipment(findEquipment( db.getString("UID"))).name;
+      }
+      
+      if (user == null)
+        user = "";
+        
+      equipmentList.add( equipment + user );
+      println(db.getString("name") + "\t" + db.getString("description") + "\t" + db.getString("UID"));
     }
 }
 
