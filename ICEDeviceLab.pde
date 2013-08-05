@@ -301,7 +301,7 @@ void onNFCEvent(String txt)
   // Provide haptic feedback
   vibe.vibrate(200);
   
-  if (txt != "" && txt.equals(lastScan)) {
+  if ((txt != "" && txt.equals(lastScan)) || (txt == "" && lastScan.equals("empty"))) {
     println("Repeat scan detected.");
     repeatScan = true;
   }
@@ -364,7 +364,7 @@ void onNFCEvent(String txt)
     if (repeatScan) {
       if (badgeType == USER_TAG) {
         currentEquipment = null;
-      } else {
+      } else if (badgeType == EQUIPMENT_TAG) {
         currentUser = null;
       }
       println("Entering edit mode");
