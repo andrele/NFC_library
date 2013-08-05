@@ -177,10 +177,10 @@ void setup()
   mainContainer = new APWidgetContainer(this); // create new main container
   writeButton = new APButton(width/3, height - fontSize*3, "Write NFC Tag");
   readButton = new APButton(width/3*2, height - fontSize*3, "Read NFC Tag");
-  userListButton = new APButton(0, height - fontSize*3, "User List");
-  eqListButton = new APButton(0, int(height - fontSize * 4.5), "Device List");
-  mainContainer.addWidget(writeButton);
-  mainContainer.addWidget(readButton);
+  userListButton = new APButton(width*2/3 - 125, height - fontSize*3, 250, 100, "User List");
+  eqListButton = new APButton(width*1/3 - 125, height - fontSize * 3, 250, 100, "Device List");
+  //mainContainer.addWidget(writeButton);
+  //mainContainer.addWidget(readButton);
   mainContainer.addWidget(userListButton);
   mainContainer.addWidget(eqListButton);
 
@@ -192,8 +192,8 @@ void setup()
   
   writeContainer = new APWidgetContainer(this); // Create container for write fields
   
-  userBadgeButton = new APToggleButton(width*1/3, fontSize, width/4, 100, "User");
-  eqBadgeButton = new APToggleButton(width*2/3, fontSize, width/4, 100, "Device");
+  userBadgeButton = new APToggleButton(x_offset, fontSize, 200, 100, "User");
+  eqBadgeButton = new APToggleButton(x_offset + 200, fontSize, 200, 100, "Device");
   writeContainer.addWidget(userBadgeButton);
   writeContainer.addWidget(eqBadgeButton); 
   
@@ -216,19 +216,17 @@ void setup()
     // Setup User Name Field
     editUserContainer.addWidget( nameField );
     nameField.setInputType(InputType.TYPE_CLASS_TEXT);
-    nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+    nameField.setImeOptions(EditorInfo.IME_ACTION_DONE);
     nameField.setText(nameText);
   
     // Setup User Email Field
     editUserContainer.addWidget( emailField );
-    emailField.setNextEditText( emailField );
     emailField.setInputType(InputType.TYPE_CLASS_TEXT);
-    emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+    emailField.setImeOptions(EditorInfo.IME_ACTION_DONE);
     emailField.setText(emailText);
   
     // Setup User Phone Field
     editUserContainer.addWidget( phoneField );
-    phoneField.setNextEditText( phoneField );
     phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
     phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
     phoneField.setCloseImeOnDone(true);
@@ -237,12 +235,11 @@ void setup()
         // Setup Equipment Name Text Field
     editEquipmentContainer.addWidget( eqNameField );
     emailField.setInputType(InputType.TYPE_CLASS_TEXT);
-    emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+    emailField.setImeOptions(EditorInfo.IME_ACTION_DONE);
     emailField.setText(nameText);
   
     // Setup Equipment Description Field
     editEquipmentContainer.addWidget( eqDescriptionField );
-    phoneField.setNextEditText( eqDescriptionField );
     phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
     phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
     phoneField.setCloseImeOnDone(true);
@@ -365,6 +362,11 @@ void onNFCEvent(String txt)
   
     // If this is a valid badge and a repeat scan, take them to Edit Mode
     if (repeatScan) {
+      if (badgeType == USER_TAG) {
+        currentEquipment = null;
+      } else {
+        currentUser = null;
+      }
       println("Entering edit mode");
       setupWriteScreen(badgeType);
       resetScanner();

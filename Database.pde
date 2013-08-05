@@ -16,6 +16,32 @@ boolean updateRecord(String[] buffer) {
   }
   return false;
 }
+
+User findUserByEquipment (Equipment eq) {
+  int userID = 0;
+  User foundUser = new User();
+  println("Finding user with badge using " + eq.name);
+  db.query("SELECT * FROM activity WHERE id_equipment="+ eq.id + " ORDER BY id DESC LIMIT 1;");
+  while (db.next ())
+  {
+    println("Found last checkout");
+    db.query("SELECT * FROM users WHERE id=" + db.getInt("id_users") + ";");
+    while (db.next())
+    {
+      foundUser.name = db.getString("name");
+      foundUser.email = db.getString("email");
+      foundUser.phone = db.getString("phone");
+      foundUser.id = db.getInt("id");
+      foundUser.UID = db.getString("UID");
+      println("User found:");
+      println(foundUser.name + "\t" + foundUser.email + "\t" + foundUser.phone + "\tID Badge: " + foundUser.id);
+      return foundUser;
+    }
+  }
+
+  println("User not found.");
+  return null;  
+}
  
 // Look up badge ID and associated equipment/user
 User findUser(String txt) {
@@ -109,6 +135,8 @@ int getEquipmentCheckoutStatus( Equipment equipment ) {
   println("No previous activity found.");
   return status;
 }
+
+
 
 // Resets the scanner by clearing the last scanned data.
 void resetScanner() {

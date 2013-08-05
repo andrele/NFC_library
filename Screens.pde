@@ -8,30 +8,31 @@ void setupWriteScreen(int badgeType) {
   writeContainer.show();
 
   newUID = generateUID();
-  if (currentUser != null && badgeType == USER_TAG) {
+  if ( badgeType == USER_TAG) {
     
     userBadgeButton.setChecked(true);
     eqBadgeButton.setChecked(false);
     
-    nameField.setText( currentUser.name );
-    emailField.setText( currentUser.email );
-    phoneField.setText( currentUser.phone );
+    if (currentUser != null) {
+      nameField.setText( currentUser.name );
+      emailField.setText( currentUser.email );
+      phoneField.setText( currentUser.phone );
+    }
+    
     editUserContainer.show();
     editEquipmentContainer.hide();
-
-//    lastTagType = USER_TAG;
-    editUserContainer.show();
-    println("User button pressed");  
   }
   
-  if (currentEquipment != null && badgeType == EQUIPMENT_TAG) {
+  if (badgeType == EQUIPMENT_TAG) {
+    
+    if ( currentEquipment != null ) { 
+      eqNameField.setText( currentEquipment.name );
+      eqDescriptionField.setText( currentEquipment.description ); 
+    }
     
     userBadgeButton.setChecked(false);
     eqBadgeButton.setChecked(true);
-    
-    eqNameField.setText( currentEquipment.name );
-    eqDescriptionField.setText( currentEquipment.description );
-    
+
     editEquipmentContainer.show();
     editUserContainer.hide();
 
@@ -104,9 +105,9 @@ void drawEquipmentScreen() {
   String checkoutStatus = "";
   
   if (currentEquipment.status == CHECKED_OUT) {
-    checkoutStatus = "Currently checked out\n\nScan user badge to\ncheck it in";
+    checkoutStatus = "Currently checked out by "+ findUserByEquipment( currentEquipment ).name +"\n\nScan a user badge to\ncheck it in";
   } else if (currentEquipment.status == CHECKED_IN) {
-    checkoutStatus = "Currently checked in\n\nScan user badge to check out";
+    checkoutStatus = "Currently checked in\n\nScan a user badge to check out";
   } else {
     checkoutStatus = "Current Status: Unknown";
   }
@@ -119,30 +120,33 @@ void drawEquipmentScreen() {
 void drawWriteScreen(int badgeType) {
   screenTitle = "Edit mode";
   
+  int y_text_offset = y_offset + 35;
+  
   pushStyle();
   
-  if (badgeType == USER_TAG) {
+  if (userBadgeButton.isChecked()) {
     textAlign(RIGHT, CENTER);
-    text("Name", x_offset, y_offset);
-    text("Email", x_offset, y_offset + (fontSize * 2.5));
-    text("Phone", x_offset, y_offset + (fontSize * 5));
-  } else if (badgeType == EQUIPMENT_TAG) {
+    text("Name", x_offset, y_text_offset);
+    text("Email", x_offset, y_text_offset + (fontSize * 2.5));
+    text("Phone", x_offset, y_text_offset + (fontSize * 5));
+  } else if (eqBadgeButton.isChecked()) {
     textAlign(RIGHT, CENTER);
-    text("Name", x_offset, y_offset);
-    text("Description", x_offset, y_offset + (fontSize * 2.5));
+    text("Name", x_offset, y_text_offset);
+    text("Description", x_offset, y_text_offset + (fontSize * 2.5));
   }
   
   textAlign(CENTER, CENTER);
-  if (currentUser == null || currentUser.UID.equals("")) {
-    text("New generated UID", width/2, y_offset + (fontSize * 7.5));
-    text( newUID, width/2, y_offset + (fontSize * 9));
-  } else {
-    text("Existing UID", width/2, y_offset + (fontSize * 7.5));
-    text( currentUser.UID, width/2, y_offset + (fontSize * 9));
+  if ( eqBadgeButton.isChecked() || userBadgeButton.isChecked() ) {
+    if (currentUser == null || currentUser.UID.equals("")) {
+      text("New generated UID", width/2, y_text_offset + (fontSize * 7.5));
+      text( newUID, width/2, y_offset + (fontSize * 9));
+    } else {
+      text("Existing UID", width/2, y_text_offset + (fontSize * 7.5));
+      text( currentUser.UID, width/2, y_text_offset + (fontSize * 9));
+    }
   }
-  
   if (changesMade) {
-    text("Changes detected. Scan tag to rewrite", width/2, y_offset + (fontSize * 10.5));
+    text("Changes detected. Scan tag again to save.", width/2, y_text_offset + (fontSize * 10.5), width*5/6, height*2/3);
   }
   
   popStyle();
