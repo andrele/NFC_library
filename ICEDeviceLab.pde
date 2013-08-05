@@ -1,4 +1,4 @@
-/**
+/*
  * <p>Ketai Sensor Library for Android: http://KetaiProject.org</p>
  *
  * <p>Ketai NFC Features:
@@ -59,15 +59,18 @@ ArrayList<String> usersList = new ArrayList<String>();
 ArrayList<String> equipmentList = new ArrayList<String>();
 
 // Setup Buttons and Text Fields
-APWidgetContainer mainContainer;
+APWidgetContainer mainContainer, editUserContainer, editEquipmentContainer;
 APWidgetContainer writeContainer;
 APButton writeButton, readButton, userListButton, eqListButton;
 APEditText nameField, emailField, phoneField;
+APEditText eqNameField, eqDescriptionField;
+APToggleButton eqBadgeButton, userBadgeButton;
 
 public static final String CREATE_USERS_SQL = "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT DEFAULT NULL,avatar_image TEXT DEFAULT NULL, UID TEXT UNIQUE);";
 public static final String CREATE_EQUIPMENT_SQL = "CREATE TABLE equipment (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT DEFAULT NULL, description TEXT DEFAULT NULL, available INTEGER DEFAULT 1, UID TEXT UNIQUE, checkout INTEGER DEFAULT 1);";
 public static final String CREATE_ACTIVITY_SQL = "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT,id_equipment INTEGER NOT NULL REFERENCES equipment (id),id_users INTEGER NOT NULL REFERENCES users (id), timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, checkout INTEGER DEFAULT 0);";
 
+public static final int UNRECOGNIZED_TAG = 0;
 public static final int USER_TAG = 1;
 public static final int EQUIPMENT_TAG = 2;
 
@@ -99,8 +102,12 @@ int fontSize = 48;
 Boolean changesMade = false;
 
 String nameText = "Test";
+String descriptionText = "Description";
 String emailText = "example@email.com";
 String phoneText = "(123) 123-1234)";
+
+int x_offset = 300;
+int y_offset = 200;
 
 PFont font;
 
@@ -178,13 +185,17 @@ void setup()
   mainContainer.addWidget(eqListButton);
 
 
- // Write Android Widgets
+ // Setup Android Widgets
 
-  int x_offset = 300;
-  int y_offset = 100;
+
   newUID = generateUID();
   
   writeContainer = new APWidgetContainer(this); // Create container for write fields
+  
+  userBadgeButton = new APToggleButton(width*1/3, fontSize, width/4, 100, "User");
+  eqBadgeButton = new APToggleButton(width*2/3, fontSize, width/4, 100, "Device");
+  writeContainer.addWidget(userBadgeButton);
+  writeContainer.addWidget(eqBadgeButton); 
   
   if (currentUser != null) {
     nameText = currentUser.name;
@@ -195,26 +206,51 @@ void setup()
   nameField = new APEditText(x_offset, y_offset, width/2, 100);
   emailField = new APEditText(x_offset, int(fontSize * 2.5) + y_offset, width/2, 100);
   phoneField = new APEditText(x_offset, int(fontSize * 5) + y_offset, width/2, 100);
+  eqNameField = new APEditText(x_offset, y_offset, width/2, 100);
+  eqDescriptionField = new APEditText(x_offset, int(fontSize * 2.5) + y_offset, width/2, 100);
   
-    writeContainer.addWidget( nameField );
+  
+  editUserContainer = new APWidgetContainer(this);
+  editEquipmentContainer = new APWidgetContainer(this);
+  
+    // Setup User Name Field
+    editUserContainer.addWidget( nameField );
     nameField.setInputType(InputType.TYPE_CLASS_TEXT);
     nameField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
     nameField.setText(nameText);
   
-    writeContainer.addWidget( emailField );
+    // Setup User Email Field
+    editUserContainer.addWidget( emailField );
     emailField.setNextEditText( emailField );
     emailField.setInputType(InputType.TYPE_CLASS_TEXT);
     emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
     emailField.setText(emailText);
   
-    writeContainer.addWidget( phoneField );
+    // Setup User Phone Field
+    editUserContainer.addWidget( phoneField );
     phoneField.setNextEditText( phoneField );
     phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
     phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
     phoneField.setCloseImeOnDone(true);
     phoneField.setText(phoneText);
     
+        // Setup Equipment Name Text Field
+    editEquipmentContainer.addWidget( eqNameField );
+    emailField.setInputType(InputType.TYPE_CLASS_TEXT);
+    emailField.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+    emailField.setText(nameText);
+  
+    // Setup Equipment Description Field
+    editEquipmentContainer.addWidget( eqDescriptionField );
+    phoneField.setNextEditText( eqDescriptionField );
+    phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
+    phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+    phoneField.setCloseImeOnDone(true);
+    phoneField.setText(descriptionText);
+    
     writeContainer.hide(); // Hide the write container for now 
+    editUserContainer.hide(); 
+    editEquipmentContainer.hide();
 }
 
 void draw() {
@@ -225,7 +261,7 @@ void draw() {
     drawScanScreen(); 
     break;
   case CREATE_MODE:
-    drawWriteScreen();
+    drawWriteScreen(lastTagType);
     break;
   case USER_PROFILE_MODE: 
     drawProfileScreen();
@@ -245,136 +281,25 @@ void draw() {
   }
   
   // Persistent UI
-  //text(screenTitle, width/2, fontSize * 1.5);
   
-
-}
-
-/*
- * Drawing subroutines
- */
- 
-void drawConfirmationScreen() {
-  pushStyle();
-  textAlign(CENTER, CENTER);
-  text(confirmationText, width/2, height/2, width*5/6, height*2/3);
-  popStyle();
-}
-
-void drawUnrecognizedScreen() {
-  pushStyle();
-  textAlign(CENTER, CENTER);
-  text("What kind of tag is this??\nScan again to enter\nedit mode.", width/2, height/2, width*5/6, height*2/3);
-  popStyle();
-}
-
-void drawScanScreen() {
-  // Set title of screen
-  screenTitle = "Scanning Mode";
-  // Rotating Circle
-  rotation += 1;
-  if (rotation > 360) {
-    rotation = 0;
+  if ( currentScreen != SCAN_MODE && currentScreen != CREATE_MODE) {
+    pushStyle();
+    textSize(46);
+    text("Tap screen to reset", width/2, fontSize * 1.5);
+    popStyle();
   }
-  pushMatrix();
-  translate(width/2, height/2);
-  pushStyle();
-  textSize(fontSize);
-  popStyle();
-  text(scanText, 0, 0);
-//  rotate(radians(rotation));
-//  arc(0, 0, width/2, width/2, PI, PI*2);
-  popMatrix();
-}
 
-void drawProfileScreen() {
-  screenTitle = "User Profile";
-  pushStyle();
-  text(currentUser.name + "\n" + currentUser.email + "\n" + currentUser.phone + "\n\nScan device tag to\ncheck it in or out", width/2, height/2, width*5/6, height*2/3);
-  popStyle();
-}
-
-void drawEquipmentScreen() {
-  screenTitle = "Equipment Profile";
-  String checkoutStatus = "";
-  
-  if (currentEquipment.status == CHECKED_OUT) {
-    checkoutStatus = "Currently checked out\n\nScan user badge to\ncheck it in";
-  } else if (currentEquipment.status == CHECKED_IN) {
-    checkoutStatus = "Currently checked in\n\nScan user badge to check out";
-  } else {
-    checkoutStatus = "Current Status: Unknown";
-  }
-  
-  pushStyle();
-  text(currentEquipment.name + "\n" + currentEquipment.description + "\n\n" + checkoutStatus, width/2, height/2, width*5/6, height*2/3);
-  popStyle();
-}
-
-void drawWriteScreen() {
-  int x_offset = width/3;
-  int y_offset = 150;
-  screenTitle = "Edit mode";
-  
-  pushStyle();
-  textAlign(RIGHT, CENTER);
-  text("Name", x_offset, y_offset);
-  text("Email", x_offset, y_offset + (fontSize * 2.5));
-  text("Phone", x_offset, y_offset + (fontSize * 5));
-  textAlign(CENTER, CENTER);
-  
-  if (currentUser == null || currentUser.UID.equals("")) {
-    text("New generated UID", width/2, y_offset + (fontSize * 7.5));
-    text( newUID, width/2, y_offset + (fontSize * 9));
-  } else {
-    text("Existing UID", width/2, y_offset + (fontSize * 7.5));
-    text( currentUser.UID, width/2, y_offset + (fontSize * 9));
-  }
-  
-  if (changesMade) {
-    text("Changes detected. Tap tag to rewrite", width/2, y_offset + (fontSize * 10.5));
-  }
-  
-  popStyle();
-}
-
-void drawActivityScreen() {
-  
-}
-
-void clearScreen() {
-  writeContainer.hide();
-  changesMade = false;
-  ketaiNFC.cancelWrite();
-}
-
-void setupWriteScreen(int x, int y) {
-  currentScreen = CREATE_MODE;
-  newUID = generateUID();
-  if (currentUser != null) {
-    nameField.setText( currentUser.name );
-    emailField.setText( currentUser.email );
-    phoneField.setText( currentUser.phone );
-  }
-  
-  writeContainer.show();
-  
-}
-
-void setupConfirmationScreen() {
-  currentScreen = CONFIRMATION_MODE;
-  resetScanner();
-  clearScreen();
 }
 
 
 /*
- * Interactions
+ * Event callbacks
  */
  
 void onNFCEvent(String txt)
 {
   boolean repeatScan = false;
+  int badgeType = UNRECOGNIZED_TAG;
   
   // Provide haptic feedback
   vibe.vibrate(200);
@@ -386,7 +311,7 @@ void onNFCEvent(String txt)
 
   // Check to see if the format is compatible (i.e. if the : delimiter is in the right place)
   if (txt.indexOf(":") == 1) {
-    int badgeType = 0;
+    
     String badgeContents = "";
     String[] badge = split(txt, ':');
     badgeType = int(badge[0]);
@@ -441,7 +366,7 @@ void onNFCEvent(String txt)
     // If this is a valid badge and a repeat scan, take them to Edit Mode
     if (repeatScan) {
       println("Entering edit mode");
-      setupWriteScreen(100, 150);
+      setupWriteScreen(badgeType);
       resetScanner();
       return;
     }
@@ -450,7 +375,7 @@ void onNFCEvent(String txt)
 
 void onClickWidget(APWidget widget) {  
   if (widget == writeButton && currentScreen != CREATE_MODE) {
-    setupWriteScreen( 100, 150 );
+    setupWriteScreen( UNRECOGNIZED_TAG );
   } else if (widget == readButton && currentScreen != SCAN_MODE) {
     screenTitle = "Scanning Mode";
     currentScreen = SCAN_MODE;
@@ -465,6 +390,10 @@ void onClickWidget(APWidget widget) {
   } else if (widget == nameField || widget == emailField || widget == phoneField) {
     // Update write buffer with changes made to text fields
     updateWriteBuffer();
+  } else if (widget == eqBadgeButton) {  // Check for badge type toggling
+    setupWriteScreen( EQUIPMENT_TAG );
+  } else if (widget == userBadgeButton) {
+    setupWriteScreen( USER_TAG );
   }
 }
 
@@ -486,223 +415,19 @@ void onNFCWrite(boolean result, String message)
 
 void mousePressed() {
   
-  if (currentScreen == UNRECOGNIZED_MODE) {
-    setupWriteScreen( 100, 150);
-    return;
+  if (currentScreen == EQUIPMENT_PROFILE_MODE || currentScreen == USER_PROFILE_MODE || currentScreen == UNRECOGNIZED_MODE) {
+    screenTitle = "Scanning Mode";
+    currentScreen = SCAN_MODE;
+    resetScanner();
+    clearScreen();
   }
   
   if (mouseY < height*2/3) {
     KetaiKeyboard.hide(this);
-    if (currentScreen == CREATE_MODE) {
-      updateWriteBuffer();
-    }
+//    if (currentScreen == CREATE_MODE) {
+//      updateWriteBuffer();
+//    }
   }
 }
 
-/* 
- * Utility Functions
- */
- 
-boolean updateRecord(String[] buffer) {
-  // Determine which table to update
-  if (buffer[4].equals("USER_TAG")) {
-    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('" + buffer[0] +"', '" + buffer[1] +"', '" + buffer[2] +"', '" + buffer[3] +"');")) {
-      println("Added " + buffer[0] + " to users");
-      return true;
-    } else if (db.execute("UPDATE users SET name='" + buffer[0] + "',email='"+ buffer[1] + "',phone='" + buffer[2] + "' WHERE uid='" +buffer[3]+"';")) {
-      println("Updated " + buffer[0] + ".");
-      return true;
-    }
-  } else {
-  }
-  return false;
-}
- 
-// Look up badge ID and associated equipment/user
-User findUser(String txt) {
-  User foundUser = new User();
-  println("Finding user with badge " + txt);
-  db.query("SELECT * FROM users WHERE UID LIKE'"+ txt + "';");
-  while (db.next ())
-  {
-    currentScreen = USER_PROFILE_MODE;
-    foundUser.name = db.getString("name");
-    foundUser.email = db.getString("email");
-    foundUser.phone = db.getString("phone");
-    foundUser.id = db.getInt("id");
-    foundUser.UID = db.getString("UID");
-    println("User found:");
-    println(foundUser.name + "\t" + foundUser.email + "\t" + foundUser.phone + "\tID Badge: " + foundUser.id);
-    
-    return foundUser;
-  }
-  
-  scanText = "User not found.";
-  println(scanText);
-  return null;
-}
 
-Equipment findEquipment(String txt) {
-  Equipment foundEquipment = new Equipment();
-  println("Finding equipment with badge " + txt);
-  db.query("SELECT * FROM equipment WHERE UID LIKE '"+ txt + "';");
-  while (db.next ())
-  {
-    currentScreen = EQUIPMENT_PROFILE_MODE;
-    foundEquipment.id = db.getInt("id");
-    foundEquipment.name = db.getString("name");
-    foundEquipment.description = db.getString("description");
-    foundEquipment.UID = db.getString("UID");
-    foundEquipment.status = getEquipmentCheckoutStatus( foundEquipment );
-    
-    println("Equipment found:");
-    println(foundEquipment.name + "\t" + foundEquipment.description + "\tID Badge: " + foundEquipment.UID + "\tStatus: " + equipmentStatus( foundEquipment ) );
-    
-    return foundEquipment;
-  }
-  
-  scanText = "Equipment not found.";
-  println(scanText);
-  return null;
-}
-
-// Function to generate a random 32 character alphanumeric string
-String generateUID() {
-  String UID = "";
-  
-  for (int i = 0; i < 16; i++) {
-    int randomChar = 0;
-    Boolean validChar = false;
-    while (validChar == false) {
-      randomChar = int(random(48, 127));
-      // If character is a number, use it
-      if (randomChar >= 48 && randomChar <= 57)
-        break;
-      // If character is a capitalized letter, use it
-      if (randomChar >= 65 && randomChar <= 90)
-        break;
-      // If character is a lowercase letter, use it
-      if (randomChar >= 97 && randomChar <= 122)
-        break;
-    }
-    
-    // Add the random character to the string
-    UID = UID + str((char)randomChar);
-  }
-  
-  return UID;
-}
-
-int getEquipmentCheckoutStatus( Equipment equipment ) {  
-  int status = -1;
-  // Check to see if equipment is already checked out
-  db.query("SELECT * FROM activity WHERE id_equipment="+ equipment.id +" ORDER BY id DESC LIMIT 1;");
-  while (db.next ())
-  {
-      status = db.getInt("checkout");
-      if (status == CHECKED_OUT)
-        println("Currently checked OUT.");
-      else
-        println("Currently checked IN.");
-      return status;
-  }
-  
-  println("No previous activity found.");
-  return status;
-}
-
-// Resets the scanner by clearing the last scanned data.
-void resetScanner() {
-  println("Clearing scanner cache");
-  lastTagID = 0;
-  lastTagType = 0;
-  lastTagUID = "";
-  lastScan = "";
-}
-
-// Checks the device in/out
-void updateCheckout(User user, Equipment equipment) {
-  int checkoutStatus = equipment.status;
-  
-  // If no previous activity, or currently CHECKED_IN, then checkout
-  if ( checkoutStatus == -1 || checkoutStatus == CHECKED_IN ) {
-    // Add record linking this equipment and user
-    if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_OUT +");") == true) {
-      confirmationText = "Checked the " + equipment.name + " out to " + user.name + "!";
-      println(confirmationText);
-      setupConfirmationScreen();
-    } else {
-      println("Checkout failed. :(");
-    }
-  } else { // Looks like device was previously checked out. Check that baby in!
-    if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_IN +");") == true) {
-      confirmationText = user.name + " checked the " + equipment.name + " in!";
-      println(confirmationText);
-      setupConfirmationScreen();
-      
-    } else {
-      println("Checkin failed :(");
-    }
-  }
-  // Clear any previous scans before moving on. Prevents accidental checkouts.
-  resetScanner();
-}
-
-// Update the write buffer and prepare for writing
-void updateWriteBuffer() {
-    tagWriteBuffer[0] = nameField.getText();
-    tagWriteBuffer[1] = emailField.getText();
-    tagWriteBuffer[2] = phoneField.getText();
-    if (currentUser.UID.equals(""))
-      tagWriteBuffer[3] = newUID;
-    else
-      tagWriteBuffer[3] = currentUser.UID;
-    tagWriteBuffer[4] = "USER_TAG";
-    println("Write buffer updated with: " + tagWriteBuffer[0] + " " + tagWriteBuffer[1] + " " + tagWriteBuffer[2] + " " + tagWriteBuffer[3] + " " + tagWriteBuffer[4]);
-    changesMade = true;
-    writeTag(tagWriteBuffer);
-}
-
-void updateUserList() {
-    db.query("SELECT * FROM users");
-    println("User records:");
-    usersList.clear();
-    while (db.next()) {
-      usersList.add(db.getString("name"));
-      println(db.getString("name") + "\t" + db.getString("email") + "\t" + db.getString("phone") + "\t" + db.getString("UID"));
-    }
-}
-
-void updateEqList() {
-    db.query("SELECT * FROM equipment");
-    println("Device records:");
-    equipmentList.clear();
-    while (db.next()) {
-      equipmentList.add(db.getString("name"));
-      println(db.getString("name") + "\t" + db.getString("dcheescription") + "\t" + db.getString("UID"));
-    }
-}
-
-String equipmentStatus( Equipment eq ) {
-  if (eq.status == CHECKED_OUT)
-    return "Checked out";
-  else if (eq.status == CHECKED_IN)
-    return "Checked in";
-  else
-    return "Unknown";
-}
-
-// Write the tag using the buffer
-void writeTag(String[] tagWriteBuffer) {
-   String tagContents = "";
-   // If tag is user type, then prefix with 1:
-   if (tagWriteBuffer[4].equals("USER_TAG")) {
-     tagContents = str(USER_TAG) + ":" + tagWriteBuffer[3];
-     // Update user table with other info
-   } else { // If tag is equipment type, then prefix with 2:
-     tagContents = str(EQUIPMENT_TAG) + ":" + tagWriteBuffer[3];
-     // Update equipment table with other info
-   }
-   
-   ketaiNFC.write(tagContents);
-}
