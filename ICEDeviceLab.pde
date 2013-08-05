@@ -104,8 +104,6 @@ String phoneText = "(123) 123-1234)";
 
 PFont font;
 
-
-
 void setup()
 {
   // Database setup
@@ -163,6 +161,7 @@ void setup()
   noFill();
   stroke(255, 255, 255);
   strokeWeight(5);
+  rectMode(CENTER);
   currentScreen = SCAN_MODE;
   
   // Main Android Widgets
@@ -258,14 +257,14 @@ void draw() {
 void drawConfirmationScreen() {
   pushStyle();
   textAlign(CENTER, CENTER);
-  text(confirmationText, width/2, height/2);
+  text(confirmationText, width/2, height/2, width*5/6, height*2/3);
   popStyle();
 }
 
 void drawUnrecognizedScreen() {
   pushStyle();
   textAlign(CENTER, CENTER);
-  text("Sorry! Your badge is unrecognized.\nWould you like to rewrite it?\nScan the tag again to enter edit mode.", width/2, height/2);
+  text("What kind of tag is this??\nScan again to enter\nedit mode.", width/2, height/2, width*5/6, height*2/3);
   popStyle();
 }
 
@@ -291,29 +290,24 @@ void drawScanScreen() {
 void drawProfileScreen() {
   screenTitle = "User Profile";
   pushStyle();
-  int x_offset = width/3;
-  int y_offset = 150;
-  textAlign(LEFT, CENTER);
-  text(currentUser.name, x_offset, y_offset);
-  text(currentUser.email, x_offset, y_offset + (fontSize * 2.5));
-  text(currentUser.phone, x_offset, y_offset + (fontSize * 5));
-
+  text(currentUser.name + "\n" + currentUser.email + "\n" + currentUser.phone + "\n\nScan device tag to\ncheck it in or out", width/2, height/2, width*5/6, height*2/3);
   popStyle();
 }
 
-
-
 void drawEquipmentScreen() {
-  int x_offset = width/3;
-  int y_offset = 150;
   screenTitle = "Equipment Profile";
+  String checkoutStatus = "";
+  
+  if (currentEquipment.status == CHECKED_OUT) {
+    checkoutStatus = "Currently checked out\n\nScan user badge to\ncheck it in";
+  } else if (currentEquipment.status == CHECKED_IN) {
+    checkoutStatus = "Currently checked in\n\nScan user badge to check out";
+  } else {
+    checkoutStatus = "Current Status: Unknown";
+  }
   
   pushStyle();
-  
-  textAlign(LEFT, CENTER);
-  text(currentEquipment.name, x_offset, y_offset);
-  text(currentEquipment.description, x_offset, y_offset + (fontSize * 2.5));
-  text(equipmentStatus( currentEquipment), x_offset, y_offset + (fontSize * 5));
+  text(currentEquipment.name + "\n" + currentEquipment.description + "\n\n" + checkoutStatus, width/2, height/2, width*5/6, height*2/3);
   popStyle();
 }
 
@@ -368,6 +362,7 @@ void setupWriteScreen(int x, int y) {
 }
 
 void setupConfirmationScreen() {
+  currentScreen = CONFIRMATION_MODE;
   resetScanner();
   clearScreen();
 }
@@ -383,6 +378,11 @@ void onNFCEvent(String txt)
   
   // Provide haptic feedback
   vibe.vibrate(200);
+  
+  if (txt != "" && txt.equals(lastScan)) {
+    println("Repeat scan detected.");
+    repeatScan = true;
+  }
 
   // Check to see if the format is compatible (i.e. if the : delimiter is in the right place)
   if (txt.indexOf(":") == 1) {
@@ -392,10 +392,7 @@ void onNFCEvent(String txt)
     badgeType = int(badge[0]);
     badgeContents = badge[1];
     
-    if (txt.equals(lastScan)) {
-      println("Repeat scan detected.");
-      repeatScan = true;
-    }
+
     
     // Check to see if it's a recognized badge type
     if (badgeType == USER_TAG) {
@@ -424,6 +421,23 @@ void onNFCEvent(String txt)
       return;
     }
     
+    lastScan = txt;
+    println("Remembering last scan");
+    lastTagType = badgeType;
+    lastTagUID = badgeContents;
+  } else {
+    
+      // Incompatible format
+      currentScreen = UNRECOGNIZED_MODE;
+      println("Unrecognized format. Reprogram?");
+//      resetScanner();
+
+      println("Remembering empty badge.");
+      lastScan = "empty";
+      lastTagType = 0;
+      lastTagUID = "";
+  }
+  
     // If this is a valid badge and a repeat scan, take them to Edit Mode
     if (repeatScan) {
       println("Entering edit mode");
@@ -431,20 +445,6 @@ void onNFCEvent(String txt)
       resetScanner();
       return;
     }
-    
-    // Remember the last valid badge scan for repeat actions
-    lastTagType = badgeType;
-    lastTagUID = badgeContents;
-    lastScan = txt;
-    println("Remembering last scan");
-  } else {
-    
-      // Incompatible format
-      currentScreen = UNRECOGNIZED_MODE;
-      println("Unrecognized format. Reprogram?");
-      resetScanner();
-  }
-  
 
 }
 
@@ -628,7 +628,7 @@ void updateCheckout(User user, Equipment equipment) {
   if ( checkoutStatus == -1 || checkoutStatus == CHECKED_IN ) {
     // Add record linking this equipment and user
     if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_OUT +");") == true) {
-      confirmationText = "Successfully checked the " + equipment.name + " out to " + user.name + "!";
+      confirmationText = "Checked the " + equipment.name + " out to " + user.name + "!";
       println(confirmationText);
       setupConfirmationScreen();
     } else {
@@ -636,7 +636,7 @@ void updateCheckout(User user, Equipment equipment) {
     }
   } else { // Looks like device was previously checked out. Check that baby in!
     if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_IN +");") == true) {
-      confirmationText = user.name + " successfully checked the " + equipment.name + " in!";
+      confirmationText = user.name + " checked the " + equipment.name + " in!";
       println(confirmationText);
       setupConfirmationScreen();
       
@@ -679,7 +679,7 @@ void updateEqList() {
     equipmentList.clear();
     while (db.next()) {
       equipmentList.add(db.getString("name"));
-      println(db.getString("name") + "\t" + db.getString("description") + "\t" + db.getString("UID"));
+      println(db.getString("name") + "\t" + db.getString("dcheescription") + "\t" + db.getString("UID"));
     }
 }
 
