@@ -4,25 +4,10 @@
  
 // badgeType can be 0 for Unrecognized, 1 for User Badge, and 2 for Equipment Badge
 void setupWriteScreen(int badgeType) {
+  clearScreen();
   currentScreen = CREATE_MODE;
   writeContainer.show();
 
-  newUID = generateUID();
-  if ( badgeType == USER_TAG) {
-    
-    userBadgeButton.setChecked(true);
-    eqBadgeButton.setChecked(false);
-    
-    if (currentUser != null) {
-      nameField.setText( currentUser.name );
-      emailField.setText( currentUser.email );
-      phoneField.setText( currentUser.phone );
-    }
-    
-    editUserContainer.show();
-    editEquipmentContainer.hide();
-  }
-  
   if (badgeType == EQUIPMENT_TAG) {
     
     if ( currentEquipment != null ) { 
@@ -36,7 +21,20 @@ void setupWriteScreen(int badgeType) {
     editEquipmentContainer.show();
     editUserContainer.hide();
 
-  }
+  } else {
+    
+    userBadgeButton.setChecked(true);
+    eqBadgeButton.setChecked(false);
+    
+    if (currentUser != null) {
+      nameField.setText( currentUser.name );
+      emailField.setText( currentUser.email );
+      phoneField.setText( currentUser.phone );
+    }
+    
+    editUserContainer.show();
+    editEquipmentContainer.hide();
+  } 
   
 }
 

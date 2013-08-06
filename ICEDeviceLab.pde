@@ -61,7 +61,7 @@ ArrayList<String> equipmentList = new ArrayList<String>();
 // Setup Buttons and Text Fields
 APWidgetContainer mainContainer, editUserContainer, editEquipmentContainer;
 APWidgetContainer writeContainer;
-APButton writeButton, readButton, userListButton, eqListButton;
+APButton writeButton, readButton, userListButton, eqListButton, cancelButton, saveButton;
 APEditText nameField, emailField, phoneField;
 APEditText eqNameField, eqDescriptionField;
 APToggleButton eqBadgeButton, userBadgeButton;
@@ -217,12 +217,14 @@ void setup()
     editUserContainer.addWidget( nameField );
     nameField.setInputType(InputType.TYPE_CLASS_TEXT);
     nameField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+    nameField.setCloseImeOnDone(true);   
     nameField.setText(nameText);
   
     // Setup User Email Field
     editUserContainer.addWidget( emailField );
     emailField.setInputType(InputType.TYPE_CLASS_TEXT);
     emailField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+    emailField.setCloseImeOnDone(true);   
     emailField.setText(emailText);
   
     // Setup User Phone Field
@@ -234,16 +236,17 @@ void setup()
     
         // Setup Equipment Name Text Field
     editEquipmentContainer.addWidget( eqNameField );
-    emailField.setInputType(InputType.TYPE_CLASS_TEXT);
-    emailField.setImeOptions(EditorInfo.IME_ACTION_DONE);
-    emailField.setText(nameText);
+    eqNameField.setInputType(InputType.TYPE_CLASS_TEXT);
+    eqNameField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+    eqNameField.setCloseImeOnDone(true);
+    eqNameField.setText(nameText);
   
     // Setup Equipment Description Field
     editEquipmentContainer.addWidget( eqDescriptionField );
-    phoneField.setInputType(InputType.TYPE_CLASS_PHONE);
-    phoneField.setImeOptions(EditorInfo.IME_ACTION_DONE);
-    phoneField.setCloseImeOnDone(true);
-    phoneField.setText(descriptionText);
+    eqDescriptionField.setInputType(InputType.TYPE_CLASS_TEXT);
+    eqDescriptionField.setImeOptions(EditorInfo.IME_ACTION_DONE);
+    eqDescriptionField.setCloseImeOnDone(true);
+    eqDescriptionField.setText(descriptionText);
     
     writeContainer.hide(); // Hide the write container for now 
     editUserContainer.hide(); 
@@ -343,6 +346,7 @@ void onNFCEvent(String txt)
       clearScreen();
       println("Not a recognized badge type. Reprogram?");
       currentScreen = UNRECOGNIZED_MODE;
+      newUID = generateUID();
       return;
     }
     
@@ -353,8 +357,11 @@ void onNFCEvent(String txt)
   } else {
     
       // Incompatible format
+      clearScreen();
       currentScreen = UNRECOGNIZED_MODE;
       println("Unrecognized format. Reprogram?");
+      newUID = generateUID();
+
 //      resetScanner();
 
       println("Remembering empty badge.");
@@ -394,10 +401,9 @@ void onClickWidget(APWidget widget) {
     eqKList = new KetaiList(this, equipmentList);
   } else if (widget == nameField || widget == emailField || widget == phoneField) {
     // Update write buffer with changes made to text fields
-    if (eqBadgeButton.isChecked())
-      updateWriteBuffer(EQUIPMENT_TAG);
-    else
-      updateWriteBuffer(USER_TAG);
+    updateWriteBuffer(USER_TAG);
+  } else if (widget == eqNameField || widget == eqDescriptionField) {
+    updateWriteBuffer(EQUIPMENT_TAG);
   } else if (widget == eqBadgeButton) {  // Check for badge type toggling
     setupWriteScreen( EQUIPMENT_TAG );
   } else if (widget == userBadgeButton) {

@@ -180,7 +180,7 @@ void updateWriteBuffer(int tagType) {
     tagWriteBuffer[0] = nameField.getText();
     tagWriteBuffer[1] = emailField.getText();
     tagWriteBuffer[2] = phoneField.getText();
-    if (currentUser.UID.equals(""))
+    if (currentUser.UID.equals("") || currentUser == null)
       tagWriteBuffer[3] = newUID;
     else
       tagWriteBuffer[3] = currentUser.UID;
@@ -188,7 +188,7 @@ void updateWriteBuffer(int tagType) {
   } else {
     tagWriteBuffer[0] = eqNameField.getText();
     tagWriteBuffer[1] = eqDescriptionField.getText();
-    if (currentEquipment.UID.equals(""))
+    if (currentEquipment.UID.equals("") || currentEquipment == null)
       tagWriteBuffer[3] = newUID;
     else
       tagWriteBuffer[3] = currentEquipment.UID;
