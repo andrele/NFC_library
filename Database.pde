@@ -24,11 +24,11 @@ boolean updateRecord(String[] buffer) {
   return false;
 }
 
-User findUserByEquipmentId (int id) {
+User findUserByEquipment (Equipment eq) {
   int userID = 0;
   User foundUser = new User();
-  println("Finding user with badge using equipment ID: " + id);
-  db.query("SELECT * FROM activity WHERE id_equipment="+ id + " ORDER BY id DESC LIMIT 1;");
+  println("Finding user with badge using equipment ID: " + eq.id);
+  db.query("SELECT * FROM activity WHERE id_equipment="+ eq.id + " ORDER BY id DESC LIMIT 1;");
   while (db.next ())
   {
     println("Found last checkout");
@@ -231,35 +231,30 @@ void updateUserList() {
 
 void updateEqList() {
   
-  ArrayList<int> equipmentIds= new ArrayList<int>();
+  ArrayList<Integer> equipmentIds= new ArrayList<Integer>();
   
-  db.query("SELECT * FROM equipment");
+  db.query("SELECT * FROM equipment ORDER BY name DESC");
   println("Device records:");
   equipmentList.clear();
   while (db.next()) {
-    
     equipmentIds.add( db.getInt("id") );
-    
-    
-    String equipment = db.getString("name");
-    String user = null;
-    if ( db.getInt("checkout") == CHECKED_OUT ) {
-      user = " / " + findUserByEquipment(findEquipment( db.getString("UID"))).name;
-    }
-    
-    if (user == null)
-      user = "";
-      
-    equipmentList.add( equipment + user );
-    println(db.getString("name") + "\t" + db.getString("description") + "\t" + db.getString("UID"));
   }
   
-  
+  for (int i = 0; i < equipmentIds.size(); i++) {
+    Equipment thisEquipment = getEquipmentById( equipmentIds.get(i) );
+    String user = "";
+    if (thisEquipment != null) {
+      if ( getEquipmentCheckoutStatus( thisEquipment ) == CHECKED_OUT ) {
+        user = " / " + findUserByEquipment( thisEquipment ).name;
+      }
+      equipmentList.add( thisEquipment.name + user );
+    }
+  }
 }
 
 Equipment getEquipmentById( int id ) {
-  Equipment foundEquipment;
-  db.query("SELECT * FROM equipment WHERE id=" + id ";");
+  Equipment foundEquipment = new Equipment();
+  db.query("SELECT * FROM equipment WHERE id=" + id + ";");
   while (db.next()) {
     foundEquipment.id = db.getInt("id");
     foundEquipment.name = db.getString("name");

@@ -197,6 +197,11 @@ void setup()
   writeContainer.addWidget(userBadgeButton);
   writeContainer.addWidget(eqBadgeButton); 
   
+  cancelButton = new APButton(fontSize, fontSize, 200, 100, "Cancel");
+//  saveButton = new APButton(width*2/3 - 125, height*1/2 + 50, 250, 100, "Save");
+  writeContainer.addWidget(cancelButton);
+//  writeContainer.addWidget(saveButton);
+  
   if (currentUser != null) {
     nameText = currentUser.name;
     emailText = currentUser.email;
@@ -415,6 +420,10 @@ void onClickWidget(APWidget widget) {
     setupWriteScreen( EQUIPMENT_TAG );
   } else if (widget == userBadgeButton) {
     setupWriteScreen( USER_TAG );
+  } else if (widget == cancelButton) {
+    currentScreen = SCAN_MODE;
+    resetScanner();
+    clearScreen();
   }
 }
 
@@ -442,18 +451,19 @@ void onNFCWrite(boolean result, String message)
 
 void mousePressed() {
   
-  if (currentScreen == EQUIPMENT_PROFILE_MODE || currentScreen == USER_PROFILE_MODE || currentScreen == UNRECOGNIZED_MODE) {
+  if (currentScreen == EQUIPMENT_PROFILE_MODE || currentScreen == USER_PROFILE_MODE || currentScreen == UNRECOGNIZED_MODE || currentScreen == CONFIRMATION_MODE) {
     screenTitle = "Scanning Mode";
     currentScreen = SCAN_MODE;
     resetScanner();
     clearScreen();
   }
   
-  if (mouseY < height*2/3) {
+  if (mouseY < height*2/3 && currentScreen == CREATE_MODE) {
     KetaiKeyboard.hide(this);
-//    if (currentScreen == CREATE_MODE) {
-//      updateWriteBuffer();
-//    }
+    if (eqBadgeButton.isChecked())
+      updateWriteBuffer(EQUIPMENT_TAG);
+    else
+      updateWriteBuffer(USER_TAG);
   }
 }
 
