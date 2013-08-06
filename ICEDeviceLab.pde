@@ -97,6 +97,7 @@ Equipment currentEquipment;
 String scanText = "Scan NFC Tag";
 String screenTitle = "";
 String confirmationText = "";
+String checkoutStatus = "";
 float rotation = 0;
 int fontSize = 48;
 Boolean changesMade = false;
@@ -343,10 +344,12 @@ void onNFCEvent(String txt)
     } else if (badgeType == EQUIPMENT_TAG) {
       clearScreen();
       currentEquipment = findEquipment(badgeContents);
-      if ( currentEquipment == null )
+      if ( currentEquipment == null ) {
         currentScreen = UNRECOGNIZED_MODE;
-      else
+      } else {
         currentScreen = EQUIPMENT_PROFILE_MODE;
+        setupEquipmentScreen();
+      }
       
       if (lastTagType == USER_TAG && currentUser != null) {
         updateCheckout( currentUser, currentEquipment );

@@ -98,10 +98,7 @@ void drawProfileScreen() {
   popStyle();
 }
 
-void drawEquipmentScreen() {
-  screenTitle = "Equipment Profile";
-  String checkoutStatus = "";
-  
+void setupEquipmentScreen() {
   if (currentEquipment.status == CHECKED_OUT) {
     checkoutStatus = "Currently checked out by "+ findUserByEquipment( currentEquipment ).name +"\n\nScan a user badge to\ncheck it in";
   } else if (currentEquipment.status == CHECKED_IN) {
@@ -109,6 +106,10 @@ void drawEquipmentScreen() {
   } else {
     checkoutStatus = "Current Status: Unknown";
   }
+}
+
+void drawEquipmentScreen() {
+  screenTitle = "Equipment Profile";
   
   pushStyle();
   text(currentEquipment.name + "\n" + currentEquipment.description + "\n\n" + checkoutStatus, width/2, height/2, width*5/6, height*2/3);
