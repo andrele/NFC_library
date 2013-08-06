@@ -135,7 +135,7 @@ void drawWriteScreen(int badgeType) {
   
   textAlign(CENTER, CENTER);
   if ( eqBadgeButton.isChecked() || userBadgeButton.isChecked() ) {
-    if (currentUser == null || currentUser.UID.equals("")) {
+    if (lastTagUID.equals("") || currentUser.UID.equals("") || currentEquipment.UID.equals("")) {
       text("New generated UID", width/2, y_text_offset + (fontSize * 7.5));
       text( newUID, width/2, y_offset + (fontSize * 9));
     } else {

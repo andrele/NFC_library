@@ -13,6 +13,13 @@ boolean updateRecord(String[] buffer) {
       return true;
     }
   } else {
+    if (db.execute("INSERT INTO equipment ('name', 'description', 'UID') VALUES ('" + buffer[0] +"', '" + buffer[1] +"', '" + buffer[3] +"');")) {
+      println("Added " + buffer[0] + " to users");
+      return true;
+    } else if (db.execute("UPDATE equipment SET name='" + buffer[0] + "',description='"+ buffer[1] + "' WHERE uid='" + buffer[3]+"';")) {
+      println("Updated " + buffer[0] + ".");
+      return true;
+    }
   }
   return false;
 }
@@ -176,22 +183,26 @@ void updateCheckout(User user, Equipment equipment) {
 
 // Update the write buffer and prepare for writing
 void updateWriteBuffer(int tagType) {
+  println("Updating write buffer");
   if (tagType == USER_TAG) {
+    println("User tag found");
     tagWriteBuffer[0] = nameField.getText();
     tagWriteBuffer[1] = emailField.getText();
     tagWriteBuffer[2] = phoneField.getText();
-    if (currentUser.UID.equals("") || currentUser == null)
+    if (lastTagUID.equals(""))
       tagWriteBuffer[3] = newUID;
     else
-      tagWriteBuffer[3] = currentUser.UID;
+      tagWriteBuffer[3] = lastTagUID;
     tagWriteBuffer[4] = "USER_TAG";
   } else {
+      println("Equipment tag found");
     tagWriteBuffer[0] = eqNameField.getText();
     tagWriteBuffer[1] = eqDescriptionField.getText();
-    if (currentEquipment.UID.equals("") || currentEquipment == null)
-      tagWriteBuffer[3] = newUID;
-    else
-      tagWriteBuffer[3] = currentEquipment.UID;
+    if (lastTagUID.equals(""))
+       tagWriteBuffer[3] = newUID;
+     else 
+       tagWriteBuffer[3] = lastTagUID;
+    
     tagWriteBuffer[4] = "EQUIPMENT_TAG";
   }
   
