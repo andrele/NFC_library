@@ -173,7 +173,7 @@ void updateCheckout(User user, Equipment equipment) {
     }
   } else { // Looks like device was previously checked out. Check that baby in!
     if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_IN +");") == true) {
-      confirmationText = "Thanks for checking the " + equipment.name + "back in to us, " + user.name + "!";
+      confirmationText = "Thanks for checking the " + equipment.name + " back in to us, " + user.name + "!";
       
       if (db.execute("UPDATE equipment SET checkout=" + CHECKED_IN + " WHERE id=" + equipment.id + ";") == true)
         println("Updated equipment status to CHECKED_IN");

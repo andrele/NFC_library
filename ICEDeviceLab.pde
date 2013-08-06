@@ -119,13 +119,13 @@ void setup()
 
   if ( db.connect() )
   {
-    println("Dropped users table: " + db.execute( "DROP TABLE users;" ));
-    println("Dropped equipment table: " + db.execute( "DROP TABLE equipment;" ));
-    println("Dropped activity table: " + db.execute( "DROP TABLE activity;" ));
-    println("Dropped badges table: " + db.execute( "DROP TABLE badges;" ));
-    // Delete all data (Uncomment for debugging only)
-    println("Deleting ALL database data!");
-    db.deleteAllData();
+//    Delete all data (Uncomment for debugging only)
+//    println("Dropped users table: " + db.execute( "DROP TABLE users;" ));
+//    println("Dropped equipment table: " + db.execute( "DROP TABLE equipment;" ));
+//    println("Dropped activity table: " + db.execute( "DROP TABLE activity;" ));
+//    println("Dropped badges table: " + db.execute( "DROP TABLE badges;" ));
+//    println("Deleting ALL database data!");
+//    db.deleteAllData();
     
     // Creating tables if they don't exist
     if (!db.tableExists("users")) {
@@ -444,6 +444,8 @@ void onNFCWrite(boolean result, String message)
     confirmationText = "Your changes were saved!";
     println(confirmationText);
     setupConfirmationScreen();
+    vibe.vibrate(400);
+    
   } else {
     confirmationText = "I have failed you! :(";
     println(confirmationText);
