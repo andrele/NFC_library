@@ -14,7 +14,7 @@ boolean updateRecord(String[] buffer) {
     }
   } else {
     if (db.execute("INSERT INTO equipment ('name', 'description', 'UID') VALUES ('" + buffer[0] +"', '" + buffer[1] +"', '" + buffer[3] +"');")) {
-      println("Added " + buffer[0] + " to users");
+      println("Added " + buffer[0] + " to equipment");
       return true;
     } else if (db.execute("UPDATE equipment SET name='" + buffer[0] + "',description='"+ buffer[1] + "' WHERE uid='" + buffer[3]+"';")) {
       println("Updated " + buffer[0] + ".");

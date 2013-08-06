@@ -323,7 +323,12 @@ void onNFCEvent(String txt)
     if (badgeType == USER_TAG) {
       clearScreen();
       currentUser = findUser(badgeContents);
-      currentScreen = USER_PROFILE_MODE;
+      if (currentUser == null) 
+        currentScreen = UNRECOGNIZED_MODE;
+      else 
+        currentScreen = USER_PROFILE_MODE;
+      
+
       
       if (lastTagType == EQUIPMENT_TAG && currentEquipment != null) {
         updateCheckout( currentUser, currentEquipment );
@@ -333,8 +338,10 @@ void onNFCEvent(String txt)
     } else if (badgeType == EQUIPMENT_TAG) {
       clearScreen();
       currentEquipment = findEquipment(badgeContents);
-      currentScreen = EQUIPMENT_PROFILE_MODE;
-
+      if ( currentEquipment == null )
+        currentScreen = UNRECOGNIZED_MODE;
+      else
+        currentScreen = EQUIPMENT_PROFILE_MODE;
       
       if (lastTagType == USER_TAG && currentUser != null) {
         updateCheckout( currentUser, currentEquipment );
@@ -422,7 +429,13 @@ void onNFCWrite(boolean result, String message)
     println("Success writing tag! Updating database...");
     updateRecord(tagWriteBuffer);
     changesMade = false;
+    confirmationText = "Your changes were saved!";
+    println(confirmationText);
+    setupConfirmationScreen();
   } else {
+    confirmationText = "I have failed you! :(";
+    println(confirmationText);
+    setupConfirmationScreen();
     println("Failed to write tag: " + message);
   }
 }
