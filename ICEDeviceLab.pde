@@ -143,13 +143,13 @@ void setup()
       println("Executing " + CREATE_ACTIVITY_SQL);
     }
     
-    // Create an entry for testing
-    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', 'pXqsnJE1Ja5Ysatm');"))
-      println("Added Andre Le to users");
-    if (db.execute("INSERT INTO equipment ('name', 'description', 'UID', 'checkout') VALUES ('Samsung S4', 'Best phone ever!', 'lGVQgmAsqOalY6bV', " + CHECKED_OUT + ");"))
-      println("Added Samsung S4 to equipment");
-    if (db.execute("INSERT INTO activity ('id_equipment', 'id_users', 'checkout') VALUES (1, 1, 1);"))
-      println("Added S4 checkout to Andre");
+//    // Create an entry for testing
+//    if (db.execute("INSERT INTO users ('name', 'email', 'phone', 'UID') VALUES ('Andre Le', 'andre.le@hp.com', '(619) 788-2610', 'pXqsnJE1Ja5Ysatm');"))
+//      println("Added Andre Le to users");
+//    if (db.execute("INSERT INTO equipment ('name', 'description', 'UID', 'checkout') VALUES ('Samsung S4', 'Best phone ever!', 'lGVQgmAsqOalY6bV', " + CHECKED_OUT + ");"))
+//      println("Added Samsung S4 to equipment");
+//    if (db.execute("INSERT INTO activity ('id_equipment', 'id_users', 'checkout') VALUES (1, 1, 1);"))
+//      println("Added S4 checkout to Andre");
 
     // Print record counts
     println("data count for users table: "+db.getRecordCount("users"));
