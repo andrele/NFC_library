@@ -161,7 +161,11 @@ void updateCheckout(User user, Equipment equipment) {
   if ( checkoutStatus == -1 || checkoutStatus == CHECKED_IN ) {
     // Add record linking this equipment and user
     if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_OUT +");") == true) {
-      confirmationText = "Checked the " + equipment.name + " out to " + user.name + "!";
+      confirmationText = "Sweet! " + user.name + ", you just checked out the " + equipment.name + "!";
+      
+      if (db.execute("UPDATE equipment SET checkout=" + CHECKED_OUT + " WHERE id=" + equipment.id + ";") == true)
+        println("Updated equipment status to CHECKED_OUT");
+      
       println(confirmationText);
       setupConfirmationScreen();
     } else {
@@ -169,7 +173,11 @@ void updateCheckout(User user, Equipment equipment) {
     }
   } else { // Looks like device was previously checked out. Check that baby in!
     if (db.execute("INSERT INTO activity ('id_users', 'id_equipment', 'checkout') VALUES ("+ user.id +", "+ equipment.id +", "+ CHECKED_IN +");") == true) {
-      confirmationText = user.name + " checked the " + equipment.name + " in!";
+      confirmationText = "Thanks for checking the " + equipment.name + "back in to us, " + user.name + "!";
+      
+      if (db.execute("UPDATE equipment SET checkout=" + CHECKED_IN + " WHERE id=" + equipment.id + ";") == true)
+        println("Updated equipment status to CHECKED_IN");
+      
       println(confirmationText);
       setupConfirmationScreen();
       
@@ -222,6 +230,8 @@ void updateUserList() {
 }
 
 void updateEqList() {
+    int[] equipmentIds;
+  
     db.query("SELECT * FROM equipment");
     println("Device records:");
     equipmentList.clear();

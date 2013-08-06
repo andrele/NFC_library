@@ -68,7 +68,7 @@ void drawConfirmationScreen() {
 void drawUnrecognizedScreen() {
   pushStyle();
   textAlign(CENTER, CENTER);
-  text("What kind of tag is this??\nScan again to enter\nedit mode.", width/2, height/2, width*5/6, height*2/3);
+  text("What kind of tag is this??\n\nScan again to enter\nedit mode.", width/2, height/2, width*5/6, height*2/3);
   popStyle();
 }
 
@@ -81,11 +81,11 @@ void drawScanScreen() {
     rotation = 0;
   }
   pushMatrix();
-  translate(width/2, height/2);
   pushStyle();
+  textAlign(CENTER, CENTER);
   textSize(fontSize);
   popStyle();
-  text(scanText, 0, 0);
+  text("Welcome to the\nICE Device Lab!\n\nScan a tag to get started", width/2, height/2, width*5/6, height*2/3);
 //  rotate(radians(rotation));
 //  arc(0, 0, width/2, width/2, PI, PI*2);
   popMatrix();
@@ -136,11 +136,9 @@ void drawWriteScreen(int badgeType) {
   textAlign(CENTER, CENTER);
   if ( eqBadgeButton.isChecked() || userBadgeButton.isChecked() ) {
     if (lastTagUID.equals("") || currentUser.UID.equals("") || currentEquipment.UID.equals("")) {
-      text("New generated UID", width/2, y_text_offset + (fontSize * 7.5));
-      text( newUID, width/2, y_offset + (fontSize * 9));
+      text("New generated UID\n" + newUID, width/2, y_text_offset + (fontSize * 7.5));
     } else {
-      text("Existing UID", width/2, y_text_offset + (fontSize * 7.5));
-      text( currentUser.UID, width/2, y_text_offset + (fontSize * 9));
+      text("Existing UID\n" + currentUser.UID, width/2, y_text_offset + (fontSize * 7.5));
     }
   }
   if (changesMade) {
